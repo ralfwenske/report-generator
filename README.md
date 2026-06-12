@@ -222,7 +222,7 @@ append/only content reduce [
 append content ""
 append content "End of report."
 
-generate-report header content footer %pages/quarterly-report.pdf
+generate-report header content footer %quarterly-report.pdf
 ```
 
 ## File overview
