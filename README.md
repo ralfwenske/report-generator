@@ -116,7 +116,7 @@ footer: [
 ]
 ```
 
-Styles can also be combined with multi-column block lines and with `%PAGE%`/`%PAGES%` tokens in footers.
+Styles can also be combined with multi-column block lines and with footer tokens (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`) in footers.
 
 **Legacy inline markup** (content lines only, for backward compatibility):
 - `*text*` — renders as bold (asterisks are stripped)
@@ -142,11 +142,16 @@ This triggers a page break and automatically repeats the table header on the nex
 
 ### Footer tokens
 
-- `%PAGE%` — replaced with the current page number
-- `%PAGES%` — replaced with the total number of pages
+| Token | Replaced with | Example output |
+|-------|---------------|----------------|
+| `%PAGE%` | Current page number | `3` |
+| `%PAGES%` | Total number of pages | `12` |
+| `%DATE%` | Current date | `2026-06-13` |
+| `%TIME%` | Current time (hh:mm) | `19:04` |
+| `%DATETIME%` | Date and time combined | `2026-06-13 19:04` |
 
 ```red
-footer: ["Page %PAGE% of %PAGES%" "Confidential"]
+footer: ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
 ```
 
 ### Multi-column headers and footers
@@ -171,11 +176,11 @@ header: [
 
 The first line renders the company name on the left, title centered, and classification on the right. The second line has left and right text with an empty center. The third line is a plain string (full-width left-aligned, as before).
 
-`%PAGE%` and `%PAGES%` tokens work inside block-based footer lines too:
+All footer tokens work inside block-based footer lines:
 
 ```red
 footer: [
-    ["ACME Corp" "" "Page %PAGE% of %PAGES%"]
+    ["ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
 ]
 ```
 
@@ -260,7 +265,7 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 | `emit-rect` | Emits a stroked rectangle |
 | `emit-filled-rect` | Emits a filled rectangle with gray fill (wrapped in `gsave`/`grestore`) |
 | `emit-header` | Emits all header lines in bold (supports multi-column block lines) |
-| `emit-footer` | Emits all footer lines with `%PAGE%`/`%PAGES%` replacement (supports multi-column block lines) |
+| `emit-footer` | Emits all footer lines with token replacement (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`; supports multi-column block lines) |
 | `emit-data-line` | Emits a text line with `~X~` style prefixes and legacy `*bold*`/`_underline_` markup |
 | `emit-table-header` | Emits a table header row with gray background and column separators |
 | `emit-table-row` | Emits a table data row with alternating row shading |

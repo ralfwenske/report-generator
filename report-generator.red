@@ -270,9 +270,12 @@ context [
         ftr [block! none!]
         page-num [integer!]
         total-pages [integer!]
-        /local ftr-y text col-w s align
+        /local ftr-y text col-w s align date-str time-str datetime-str
     ][
         if none? ftr [exit]
+        date-str: form now/date
+        time-str: copy/part form now/time 5
+        datetime-str: rejoin [date-str " " time-str]
         align: copy ["L" "C" "R"] 
         col-w: page-width - margin-left - margin-right
         ftr-y: margin-bottom + ((length? ftr) * line-height)
@@ -284,6 +287,9 @@ context [
                             text: copy to string! s
                             text: replace/all text "%PAGE%" to string! page-num
                             text: replace/all text "%PAGES%" to string! total-pages
+                            text: replace/all text "%DATE%" date-str
+                            text: replace/all text "%TIME%" time-str
+                            text: replace/all text "%DATETIME%" datetime-str
                             emit-styled out margin-left ftr-y text col-w align/:i regular-font
                         ]
                     ]
@@ -292,6 +298,9 @@ context [
                 text: copy line
                 text: replace/all text "%PAGE%" to string! page-num
                 text: replace/all text "%PAGES%" to string! total-pages
+                text: replace/all text "%DATE%" date-str
+                text: replace/all text "%TIME%" time-str
+                text: replace/all text "%DATETIME%" datetime-str
                 emit-styled out margin-left ftr-y text col-w "L" regular-font
             ]
             ftr-y: ftr-y - line-height

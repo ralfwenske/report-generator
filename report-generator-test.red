@@ -22,7 +22,7 @@ view/options layout [
             append content rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]
         ]
 
-        footer: ["Page %PAGE% of %PAGES% | Confidential"]
+        footer: [["Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]]
 
         generate-report/no-print header content footer %reports/text-report.pdf
     ]
@@ -39,7 +39,7 @@ view/options layout [
             ["Gadget X" "23" "$12.50" "$287.50"]
         ]
 
-        footer: ["Page %PAGE% of %PAGES%"]
+        footer: [["Page %PAGE% of %PAGES%" "" "%TIME%"]]
 
         generate-report/no-print header content footer %reports/table-report.pdf
     ]
@@ -111,9 +111,8 @@ view/options layout [
         append content "_End of quarterly report_"
 
         footer: [
-            ""
-            "ACME Corp - Confidential"
-            "Page %PAGE% of %PAGES%"
+            ["" "ACME Corp - Confidential" ""]
+            ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
         ]
 
         generate-report/no-print header content footer %reports/unified-report.pdf
@@ -161,7 +160,7 @@ view/options layout [
         append content ""
         append content "End of inventory."
 
-        footer: ["Page %PAGE% of %PAGES%"]
+        footer: [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
 
         generate-report/no-print header content footer %reports/pagebreak-report.pdf
     ]
@@ -195,7 +194,7 @@ view/options layout [
         ]
 
         footer: [
-            ["ACME Corp" "" "Page %PAGE% of %PAGES%"]
+            ["ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
         ]
 
         generate-report/no-print header content footer %reports/multicolumn-report.pdf
@@ -231,7 +230,7 @@ view/options layout [
 
         footer: [
             ["" "Center-aligned demo" ""]
-            ["Company Inc" "" "Page %PAGE% of %PAGES%"]
+            ["Company Inc" "%DATE%" "Page %PAGE% of %PAGES%"]
         ]
 
         generate-report/no-print header content footer %reports/center-align-report.pdf
@@ -278,7 +277,7 @@ view/options layout [
         append content "Combine letters: bi bu iu biu (any order)"
 
         footer: [
-            ["~i~ACME Corp" "" "~b~Page %PAGE% of %PAGES%"]
+            ["~i~ACME Corp" "%TIME%" "~b~Page %PAGE% of %PAGES%"]
         ]
 
         generate-report/no-print header content footer %reports/text-styles-report.pdf
