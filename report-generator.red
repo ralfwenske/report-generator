@@ -33,51 +33,25 @@ context [
         font-name [string!]
     ][
         append out rejoin [font-name " findfont " font-size " scalefont setfont"]
-        append out newline
+        append out lf
     ]
 
-    emit-text: func [
+    emit-textn: func [
         out [string!]
         x [integer!]
         y [integer!]
         text [string!]
+        /center col-w-c [integer!]
+        /right col-w-r [integer!]
     ][
-        append out rejoin [x " " y " moveto (" ps-escape text ") show"]
-        append out newline
-    ]
-
-    emit-text-center: func [
-        out [string!]
-        x [integer!]
-        y [integer!]
-        text [string!]
-        col-w [integer!]
-    ][
-        append out "gsave"
-        append out newline
-        append out rejoin ["(" ps-escape text ") stringwidth pop"]
-        append out newline
-        append out rejoin [col-w " exch sub 2 div " x " add " y " moveto (" ps-escape text ") show"]
-        append out newline
-        append out "grestore"
-        append out newline
-    ]
-
-    emit-text-right: func [
-        out [string!]
-        x [integer!]
-        y [integer!]
-        text [string!]
-        col-w [integer!]
-    ][
-        append out "gsave"
-        append out newline
-        append out rejoin ["(" ps-escape text ") stringwidth pop"]
-        append out newline
-        append out rejoin [col-w " exch sub " x " add 3 sub " y " moveto (" ps-escape text ") show"]
-        append out newline
-        append out "grestore"
-        append out newline
+        append out rejoin ["gsave" lf x " " y " moveto (" ps-escape text ")"]
+        if center [
+            append out rejoin [" stringwidth pop" lf  col-w-c " exch sub 2 div " x " add " y " moveto (" ps-escape text ")"]
+        ]
+        if right [
+            append out rejoin [" stringwidth pop" lf  col-w-r " exch sub " x " add " y " moveto (" ps-escape text ")" ]
+        ]
+        append out rejoin [" show" lf "grestore" lf]
     ]
 
     parse-style: func [
@@ -109,25 +83,24 @@ context [
             i: 1
             while [i <= length? prefix][
                 ch: prefix/:i
+                has-style: true
                 case [
-                    ch = #"b" [bold: true has-style: true]
-                    ch = #"i" [italic: true has-style: true]
-                    ch = #"u" [underline: true has-style: true]
+                    ch = #"b" [bold: true]
+                    ch = #"i" [italic: true]
+                    ch = #"u" [underline: true]
                     ch = #"h" [
                         if (i + 1) <= length? prefix [
                             ch: prefix/(i + 1)
                             if all [ch >= #"1" ch <= #"3"][
                                 heading: to integer! to string! ch
-                                has-style: true
                             ]
                             i: i + 1
                         ]
                     ]
-                    true []
+                    true [has-style: false]
                 ]
                 i: i + 1
             ]
-
             unless has-style [text: s]
         ][
             text: s
@@ -166,7 +139,7 @@ context [
                 " findfont " font-size " scalefont setfont"
             ]
         ]
-        append out newline
+        append out lf
     ]
 
     emit-underline: func [
@@ -179,9 +152,9 @@ context [
         align [string!]
     ][
         append out "gsave"
-        append out newline
+        append out lf
         append out "newpath"
-        append out newline
+        append out lf
         either align = "C" [
             append out rejoin [
                 "(" ps-escape text ") stringwidth pop dup "
@@ -200,9 +173,9 @@ context [
                 "(" ps-escape text ") stringwidth pop 0 rlineto stroke"
             ]
         ]]
-        append out newline
+        append out lf
         append out "grestore"
-        append out newline
+        append out lf
     ]
 
     emit-styled: func [
@@ -220,18 +193,18 @@ context [
         either any [style/1 style/2 style/3 style/4 > 0][
             select-style-font out style/1 style/2 style/4
             case [
-                align = "C" [emit-text-center out x y style/5 col-w]
-                align = "R" [emit-text-right out x y style/5 col-w]
-                true [emit-text out x y style/5]
+                align = "C" [emit-textn/center out x y style/5 col-w]
+                align = "R" [emit-textn/right out x y style/5 col-w]
+                true [emit-textn out x y style/5]
             ]
             if style/3 [emit-underline out x y style/5 col-w align]
             emit-font out default-font
         ][
             emit-font out default-font
             case [
-                align = "C" [emit-text-center out x y text col-w]
-                align = "R" [emit-text-right out x y text col-w]
-                true [emit-text out x y text]
+                align = "C" [emit-textn/center out x y text col-w]
+                align = "R" [emit-textn/right out x y text col-w]
+                true [emit-textn out x y text]
             ]
         ]
     ]
@@ -244,7 +217,7 @@ context [
         h [integer!]
     ][
         append out rejoin ["newpath " x " " y " moveto " w " 0 rlineto 0 " h " rlineto " (0 - w) " 0 rlineto closepath stroke"]
-        append out newline
+        append out lf
     ]
 
     emit-filled-rect: func [
@@ -256,11 +229,11 @@ context [
         gray [float!]
     ][
         append out "gsave"
-        append out newline
+        append out lf
         append out rejoin [gray " setgray newpath " x " " y " moveto " w " 0 rlineto 0 " h " rlineto " (0 - w) " 0 rlineto closepath fill"]
-        append out newline
+        append out lf
         append out "grestore"
-        append out newline
+        append out lf
     ]
 
     emit-header: func [
@@ -305,28 +278,14 @@ context [
         ftr-y: margin-bottom + ((length? ftr) * line-height)
         foreach line ftr [
             either block? line [
-                if (length? line) >= 1 [
-                    if s: pick line 1 [
-                        text: copy to string! s
-                        text: replace/all text "%PAGE%" to string! page-num
-                        text: replace/all text "%PAGES%" to string! total-pages
-                        emit-styled out margin-left ftr-y text col-w "L" regular-font
-                    ]
-                ]
-                if (length? line) >= 2 [
-                    if s: pick line 2 [
-                        text: copy to string! s
-                        text: replace/all text "%PAGE%" to string! page-num
-                        text: replace/all text "%PAGES%" to string! total-pages
-                        emit-styled out margin-left ftr-y text col-w "C" regular-font
-                    ]
-                ]
-                if (length? line) >= 3 [
-                    if s: pick line 3 [
-                        text: copy to string! s
-                        text: replace/all text "%PAGE%" to string! page-num
-                        text: replace/all text "%PAGES%" to string! total-pages
-                        emit-styled out margin-left ftr-y text col-w "R" regular-font
+                repeat i 3 [
+                    if (length? line) >= i [
+                        if s: pick line i [
+                            text: copy to string! s
+                            text: replace/all text "%PAGE%" to string! page-num
+                            text: replace/all text "%PAGES%" to string! total-pages
+                            emit-styled out margin-left ftr-y text col-w "L" regular-font
+                        ]
                     ]
                 ]
             ][
@@ -353,16 +312,16 @@ context [
                 find line "*" [
                     text: replace/all copy line "*" ""
                     emit-font out bold-font
-                    emit-text out margin-left page-y text
+                    emit-textn out margin-left page-y text
                     emit-font out regular-font
                 ]
                 find line "_" [
                     text: replace/all copy line "_" ""
-                    emit-text out margin-left page-y text
+                    emit-textn out margin-left page-y text
                     emit-underline out margin-left page-y text 0 "L"
                 ]
                 true [
-                    emit-text out margin-left page-y line
+                    emit-textn out margin-left page-y line
                 ]
             ]
         ]
@@ -480,11 +439,11 @@ context [
 
     set 'generate-report func [
         "Generate a multi-page A4 report with mixed text and table content"
-        header [block! none!] "Optional header lines (shown at top of each page)"
-        content [block!] "Mixed content: strings for text, 'table blocks for tables"
-        footer [block! none!] "Optional footer lines (use %PAGE% and %PAGES% for page numbers)"
-        output [file!] "Output PDF file path"
-        /no-print "Generate PDF but do not send to printer"
+        header [block! none!]   "Optional header lines (shown at top of each page)"
+        content [block!]        "Mixed content: strings for text, 'table blocks for tables"
+        footer [block! none!]   "Optional footer lines (use %PAGE% and %PAGES% for page numbers)"
+        output [file!]          "Output PDF file path"
+        /no-print               "Generate PDF but do not send to printer"
         /local usable-top usable-bottom page-bottom
             pages page-num page-content page-y
             item out-ps total-pages ps-file pdf-file p
@@ -600,27 +559,27 @@ context [
         total-pages: length? pages
 
         out-ps: copy "%!PS-Adobe-3.0"
-        append out-ps newline
+        append out-ps lf
         append out-ps rejoin ["%%Pages: " total-pages]
-        append out-ps newline
+        append out-ps lf
         append out-ps "%%EndComments"
-        append out-ps newline
+        append out-ps lf
 
         p: 0
         while [p < total-pages][
             p: p + 1
             append out-ps rejoin ["%%Page: " p " " p]
-            append out-ps newline
+            append out-ps lf
             append out-ps "0 setgray 1 setlinewidth"
-            append out-ps newline
+            append out-ps lf
             append out-ps pick pages p
             emit-footer out-ps footer p total-pages
             append out-ps "showpage"
-            append out-ps newline
+            append out-ps lf
         ]
 
         append out-ps "%%EOF"
-        append out-ps newline
+        append out-ps lf
 
         ps-file: replace/all copy output ".pdf" ".ps"
         pdf-file: output
@@ -628,7 +587,7 @@ context [
         write ps-file out-ps
 
         call/wait rejoin ["ps2pdf " ps-file " " pdf-file]
-
+        delete ps-file
         unless no-print [
             call/wait rejoin ["lpr " pdf-file]
         ]
