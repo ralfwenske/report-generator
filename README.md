@@ -191,6 +191,8 @@ footer: [
 
 ## Full example
 
+See [`full-example.red`](full-example.red) — run it with `red full-example.red`:
+
 ```red
 Red []
 
@@ -222,15 +224,19 @@ append/only content reduce [
 append content ""
 append content "End of report."
 
-generate-report header content footer %quarterly-report.pdf
+generate-report/no-print header content footer %reports/full-example.pdf
 ```
+
+The output PDF is written to the `reports/` directory (which is gitignored).
 
 ## File overview
 
 | File | Purpose |
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
+| `full-example.red` | Minimal full example — run with `red full-example.red` |
 | `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, and style demos |
+| `reports/` | Output directory for generated PDFs (gitignored) |
 | `*.ps` | Generated PostScript (created alongside the PDF) |
 | `*.pdf` | Generated PDF (filename specified by the `output` parameter) |
 
