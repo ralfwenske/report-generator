@@ -270,10 +270,10 @@ context [
         ftr [block! none!]
         page-num [integer!]
         total-pages [integer!]
-        /local ftr-y text col-w s
+        /local ftr-y text col-w s align
     ][
         if none? ftr [exit]
-
+        align: copy ["L" "C" "R"] 
         col-w: page-width - margin-left - margin-right
         ftr-y: margin-bottom + ((length? ftr) * line-height)
         foreach line ftr [
@@ -284,7 +284,7 @@ context [
                             text: copy to string! s
                             text: replace/all text "%PAGE%" to string! page-num
                             text: replace/all text "%PAGES%" to string! total-pages
-                            emit-styled out margin-left ftr-y text col-w "L" regular-font
+                            emit-styled out margin-left ftr-y text col-w align/:i regular-font
                         ]
                     ]
                 ]
