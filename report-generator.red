@@ -1,7 +1,7 @@
 Red [
     Title: "Report Generator Module"
     Purpose: "Generate multi-page A4 PostScript reports with text and tables"
-    Exports: [generate-report]
+    Exports: [generate-report ]
 ]
 
 context [
