@@ -36,7 +36,7 @@ context [
         append out lf
     ]
 
-    emit-textn: func [
+    emit-text: func [
         out [string!]
         x [integer!]
         y [integer!]
@@ -193,18 +193,18 @@ context [
         either any [style/1 style/2 style/3 style/4 > 0][
             select-style-font out style/1 style/2 style/4
             case [
-                align = "C" [emit-textn/center out x y style/5 col-w]
-                align = "R" [emit-textn/right out x y style/5 col-w]
-                true [emit-textn out x y style/5]
+                align = "C" [emit-text/center out x y style/5 col-w]
+                align = "R" [emit-text/right out x y style/5 col-w]
+                true [emit-text out x y style/5]
             ]
             if style/3 [emit-underline out x y style/5 col-w align]
             emit-font out default-font
         ][
             emit-font out default-font
             case [
-                align = "C" [emit-textn/center out x y text col-w]
-                align = "R" [emit-textn/right out x y text col-w]
-                true [emit-textn out x y text]
+                align = "C" [emit-text/center out x y text col-w]
+                align = "R" [emit-text/right out x y text col-w]
+                true [emit-text out x y text]
             ]
         ]
     ]
@@ -312,16 +312,16 @@ context [
                 find line "*" [
                     text: replace/all copy line "*" ""
                     emit-font out bold-font
-                    emit-textn out margin-left page-y text
+                    emit-text out margin-left page-y text
                     emit-font out regular-font
                 ]
                 find line "_" [
                     text: replace/all copy line "_" ""
-                    emit-textn out margin-left page-y text
+                    emit-text out margin-left page-y text
                     emit-underline out margin-left page-y text 0 "L"
                 ]
                 true [
-                    emit-textn out margin-left page-y line
+                    emit-text out margin-left page-y line
                 ]
             ]
         ]
