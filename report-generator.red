@@ -270,12 +270,12 @@ context [
         ftr [block! none!]
         page-num [integer!]
         total-pages [integer!]
-        /local ftr-y text col-w s align date-str time-str datetime-str
+        date-str [string!]
+        time-str [string!]
+        datetime-str [string!]
+        /local ftr-y text col-w s align
     ][
         if none? ftr [exit]
-        date-str: form now/date
-        time-str: copy/part form now/time 5
-        datetime-str: rejoin [date-str " " time-str]
         align: copy ["L" "C" "R"] 
         col-w: page-width - margin-left - margin-right
         ftr-y: margin-bottom + ((length? ftr) * line-height)
@@ -448,21 +448,26 @@ context [
 
     set 'generate-report func [
         "Generate a multi-page A4 report with mixed text and table content"
-        header [block! none!]   "Optional header lines (shown at top of each page)"
+        header [block! none!]   "Optional header lines (shown at top of each page, supports %DATE%/%TIME%/%DATETIME%/%PAGE%/%PAGES% tokens)"
         content [block!]        "Mixed content: strings for text, 'table blocks for tables"
-        footer [block! none!]   "Optional footer lines (use %PAGE% and %PAGES% for page numbers)"
+        footer [block! none!]   "Optional footer lines (supports %DATE%/%TIME%/%DATETIME%/%PAGE%/%PAGES% tokens)"
         output [file!]          "Output PDF file path"
         /no-print               "Generate PDF but do not send to printer"
         /local usable-top usable-bottom page-bottom
             pages page-num page-content page-y
-            item out-ps total-pages ps-file pdf-file p
+            item out-ps total-pages ps-file pdf-file p page-ps
             table-columns table-rows col-info col-titles col-widths col-aligns
             num-cols table-left table-width row-h
             row-num table-total-h ci
+            date-str time-str datetime-str
     ][
         usable-top: page-height - margin-top
         usable-bottom: margin-bottom
         page-bottom: usable-bottom + either ftr: footer [(length? ftr) * line-height][0]
+
+        date-str: form now/date
+        time-str: copy/part form now/time 5
+        datetime-str: rejoin [date-str " " time-str]
 
         pages: copy []
         page-num: 1
@@ -577,12 +582,18 @@ context [
         p: 0
         while [p < total-pages][
             p: p + 1
+            page-ps: copy pick pages p
+            replace/all page-ps "%PAGE%" to string! p
+            replace/all page-ps "%PAGES%" to string! total-pages
+            replace/all page-ps "%DATE%" date-str
+            replace/all page-ps "%TIME%" time-str
+            replace/all page-ps "%DATETIME%" datetime-str
             append out-ps rejoin ["%%Page: " p " " p]
             append out-ps lf
             append out-ps "0 setgray 1 setlinewidth"
             append out-ps lf
-            append out-ps pick pages p
-            emit-footer out-ps footer p total-pages
+            append out-ps page-ps
+            emit-footer out-ps footer p total-pages date-str time-str datetime-str
             append out-ps "showpage"
             append out-ps lf
         ]

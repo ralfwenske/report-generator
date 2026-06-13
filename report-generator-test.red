@@ -168,7 +168,7 @@ view/options layout [
     button "Multi-column Header/Footer" blue [
         header: [
             ["ACME Corp" "Quarterly Report" "Confidential"]
-            ["Dept: Sales" "" "Date: 2026-06-12"]
+            ["Dept: Sales" "" "%DATETIME%"]
             ""
         ]
 

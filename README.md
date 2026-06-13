@@ -23,9 +23,9 @@ generate-report/no-print header content footer %report.pdf   ; skip printing, ju
 
 | Argument | Type | Description |
 |----------|------|-------------|
-| `header` | `block!` or `none!` | Lines printed at the top of every page (bold). Each line can be a string or a block of 1–3 strings for multi-column layout. |
+| `header` | `block!` or `none!` | Lines printed at the top of every page (bold). Each line can be a string or a block of 1–3 strings for multi-column layout. Supports `%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%` tokens. |
 | `content` | `block!` | Mixed text lines and table definitions |
-| `footer` | `block!` or `none!` | Lines printed at the bottom of every page. Same format as header. |
+| `footer` | `block!` or `none!` | Lines printed at the bottom of every page. Same format as header. Same token support. |
 | `output` | `file!` | Output PDF file path. A `.ps` file is also created alongside it. |
 
 ### Content block
@@ -140,7 +140,9 @@ Inside table data, use a row where the first column is `"^L"`:
 
 This triggers a page break and automatically repeats the table header on the next page. Useful for tables that are too large for a single page.
 
-### Footer tokens
+### Header and footer tokens
+
+Tokens can be used in both header and footer lines. Date and time are captured once when `generate-report` is called, so they are consistent across all pages.
 
 | Token | Replaced with | Example output |
 |-------|---------------|----------------|
@@ -152,6 +154,7 @@ This triggers a page break and automatically repeats the table header on the nex
 
 ```red
 footer: ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
+header: [["ACME Corp" "" "%DATE%"]]
 ```
 
 ### Multi-column headers and footers
@@ -169,7 +172,7 @@ You can use 1, 2, or 3 elements. Missing positions are simply skipped.
 ```red
 header: [
     ["ACME Corp" "Quarterly Report" "Confidential"]
-    ["Dept: Sales" "" "Date: 2026-06-12"]
+    ["Dept: Sales" "" "%DATETIME%"]
     ""
 ]
 ```
@@ -265,7 +268,7 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 | `emit-rect` | Emits a stroked rectangle |
 | `emit-filled-rect` | Emits a filled rectangle with gray fill (wrapped in `gsave`/`grestore`) |
 | `emit-header` | Emits all header lines in bold (supports multi-column block lines) |
-| `emit-footer` | Emits all footer lines with token replacement (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`; supports multi-column block lines) |
+| `emit-footer` | Emits all footer lines with token replacement (receives pre-computed date/time; supports multi-column block lines) |
 | `emit-data-line` | Emits a text line with `~X~` style prefixes and legacy `*bold*`/`_underline_` markup |
 | `emit-table-header` | Emits a table header row with gray background and column separators |
 | `emit-table-row` | Emits a table data row with alternating row shading |
@@ -275,5 +278,5 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 
 1. Content is processed page by page, tracking `page-y` position
 2. Each page's PostScript is collected into a `pages` block
-3. Footers are added during final assembly (after total page count is known)
+3. During final assembly, tokens (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`) are replaced in each page's PostScript (covers headers), then footers are emitted
 4. The final PS file is assembled with DSC comments, converted to PDF, and sent to the printer
