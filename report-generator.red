@@ -505,7 +505,7 @@ context [
                     table-rows: copy []
                     ci: 3
                     while [ci <= length? item][
-                        append/only table-rows pick item ci
+                        append/only table-rows reduce pick item ci
                         ci: ci + 1
                     ]
 

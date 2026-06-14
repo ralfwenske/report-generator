@@ -2,30 +2,36 @@ Red []
 
 do %report-generator.red
 
-header: [
-    ["ACME Corp" "Quarterly Report" "Confidential"]
+widgetC: reduce ["Widget C" "245" (to-money 8890.00)]
+threethousand: 3000
+
+;---------------------------------------------------------
+generate-report/no-print 
+    [ ;HEADER
+        ["ACME Corp" "~h1~Quarterly Report" "~iu~Confidential"]
+        ["" "%DATETIME%"]
+    ] ;header
+
+    [ ;CONTENT
     ""
-]
-footer: [
-    ["ACME Corp" "" "Page %PAGE% of %PAGES%"]
-]
+    "*Sales Summary*"
+    ""
+    "Q1 sales data for all product lines."
+    ""
+    [
+        'table
+        ["Product" 180 "L" "Qty" 60 "C" "Total" 80 "R"]
+        ["Widget A" "120" (to-money threethousand)]
+        ["Widget B" "45" "$1'890.00"]
+        widgetC
+        ["~b~TOTALS" "" "$13'780.00"]
+    ]
+    ""
+    "End of report."
+    ] ;content
 
-content: copy []
+    [ ;FOOTER
+        ["ACME Corp" "%TIME%" "Page %PAGE% of %PAGES%"]
+    ] ;footer
 
-append content "*Sales Summary*"
-append content ""
-append content "Q1 sales data for all product lines."
-append content ""
-
-append/only content reduce [
-    'table
-    ["Product" 180 "L" "Qty" 60 "C" "Total" 80 "R"]
-    ["Widget A" "120" "$3000.00"]
-    ["Widget B" "45" "$1890.00"]
-    ["*TOTALS*" "" "$4890.00"]
-]
-
-append content ""
-append content "End of report."
-
-generate-report/no-print header content footer %reports/full-example.pdf
+    %reports/full-example.pdf
