@@ -2,7 +2,7 @@
 
 A Red module that generates multi-page A4 PDF reports with mixed text and table content, ready for printing via CUPS/lpr.
 
-![image](./reports/full-example.pdf)
+![image](reports/full-example.png)
 
 ## How it works
 
