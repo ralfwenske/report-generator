@@ -2,6 +2,8 @@
 
 A Red module that generates multi-page A4 PDF reports with mixed text and table content, ready for printing via CUPS/lpr.
 
+![image](./reports/full-example.pdf)
+
 ## How it works
 
 The module generates PostScript, converts it to PDF via `ps2pdf` (Ghostscript), and optionally sends it to the default printer via `lpr`. All rendering happens in PostScript — no external PDF libraries needed.
@@ -35,8 +37,6 @@ The `content` block is a flat list of items:
 - **String** — a text line. Supports `~X~` style prefixes (see below) and legacy `*bold*` / `_underline_` inline markup.
 - **`^L` string** — forces a page break at that point.
 - **Table block** — a nested block starting with the word `'table`, followed by column definitions and row data.
-
-Tables must be added with `append/only`:
 
 ```red
 content: copy []
