@@ -605,7 +605,19 @@ context [
         pdf-file: output
 
         write ps-file out-ps
-        call/wait rejoin ["ps2pdf " ps-file " " pdf-file]
+        result: call/wait rejoin ["ps2pdf " ps-file " " pdf-file]
+        if result <> 0 [
+            print rejoin [
+                "Error: ps2pdf failed (exit code " result ")." lf
+                "Ghostscript is required to convert PostScript to PDF." lf
+                "Install it with:" lf
+                "  Linux:   sudo apt install ghostscript" lf
+                "  macOS:   brew install ghostscript" lf
+                "  Windows: https://ghostscript.com/releases/gsdnld.html"
+            ]
+            delete ps-file
+            exit
+        ]
 
         if browser [
             browse pdf-file

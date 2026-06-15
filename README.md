@@ -10,6 +10,16 @@ The module generates PostScript, converts it to PDF via `ps2pdf` (Ghostscript), 
 
 **Dependencies:** Red, Ghostscript (`ps2pdf`)
 
+### Installing Ghostscript
+
+`ps2pdf` is part of [Ghostscript](https://ghostscript.com/) and is **not** pre-installed on macOS or Windows.
+
+| OS | Install command |
+|----|----------------|
+| Linux | `sudo apt install ghostscript` |
+| macOS | `brew install ghostscript` |
+| Windows | Download from [ghostscript.com](https://ghostscript.com/releases/gsdnld.html) or `winget install GhostScript.GhostScript` |
+
 ## Usage
 
 ```red
