@@ -92,10 +92,14 @@ Prefix any string with `~X~` to apply styling. Works everywhere: content lines, 
 | `~b~` | **Bold** |
 | `~i~` | *Italic* |
 | `~u~` | Underline |
+| `~m~` | Monospace (Courier) |
 | `~bi~` or `~ib~` | Bold + italic |
 | `~bu~` or `~ub~` | Bold + underline |
 | `~iu~` or `~ui~` | Italic + underline |
 | `~biu~` (any order) | Bold + italic + underline |
+| `~mb~` | Monospace + bold |
+| `~mi~` | Monospace + italic |
+| `~mbu~` | Monospace + bold + underline |
 | `~h1~` | Heading 1 (24pt bold) |
 | `~h2~` | Heading 2 (18pt bold) |
 | `~h3~` | Heading 3 (14pt bold) |
@@ -107,12 +111,15 @@ append content "~b~Bold title"
 append content "~i~Italic paragraph"
 append content "~bu~Bold and underlined"
 append content "~h2~Section heading"
+append content "~m~Monospaced text"
+append content "~mb~Bold mono"
 ```
 
 In table cells:
 
 ```red
 ["~i~Widget A" "~bu~Active" "$250.00"]
+["~m~Code" "~mb~123.45" "~mi~Done"]
 ```
 
 In header/footer lines:
@@ -201,7 +208,7 @@ footer: [
 
 - A4 (595 x 842 pts)
 - 50pt margins on all sides
-- Font: Times-Roman 12pt, line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic.
+- Font: Times-Roman 12pt, line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`~m~` prefix).
 - Table rows: 19pt (line-height + 4)
 - Headers rendered in bold
 - Table headers have a light gray background
@@ -260,7 +267,7 @@ The output PDF is written to the `reports/` directory (which is gitignored).
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
 | `full-example.red` | Minimal full example — run with `red full-example.red` |
-| `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, and style demos. Includes a Preview checkbox to open the PDF in the default viewer. |
+| `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, style, and mono demos. Includes a Preview checkbox to open the PDF in the default viewer. |
 | `reports/` | Output directory for generated PDFs (gitignored) |
 | `*.pdf` | Generated PDF (filename specified by the `output` parameter) |
 

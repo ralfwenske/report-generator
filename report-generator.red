@@ -17,6 +17,10 @@ context [
     italic-font: "/Times-Italic"
     bold-italic-font: "/Times-BoldItalic"
     regular-font: "/Times-Roman"
+    mono-font: "/Courier"
+    mono-bold-font: "/Courier-Bold"
+    mono-italic-font: "/Courier-Oblique"
+    mono-bold-italic-font: "/Courier-BoldOblique"
 
     ps-escape: func [
         "Escape parentheses and backslashes for PostScript strings"
@@ -55,28 +59,29 @@ context [
     ]
 
     parse-style: func [
-        "Parse ~X~ style prefix from text, returns [bold? italic? underline? heading text]"
+        "Parse ~X~ style prefix from text, returns [bold? italic? underline? mono? heading text]"
         s [string!]
-        /local n prefix ch bold italic underline heading text i has-style
+        /local n prefix ch bold italic underline mono heading text i has-style
     ][
         bold: false
         italic: false
         underline: false
+        mono: false
         heading: 0
         has-style: false
         text: s
 
-        if (length? s) < 3 [return reduce [bold italic underline heading text]]
-        if s/1 <> #"~" [return reduce [bold italic underline heading text]]
+        if (length? s) < 3 [return reduce [bold italic underline mono heading text]]
+        if s/1 <> #"~" [return reduce [bold italic underline mono heading text]]
 
         n: 2
-        while [n <= 5][
+        while [n <= 6][
             if n > length? s [break]
             if s/:n = #"~" [break]
             n: n + 1
         ]
 
-        either all [n >= 3 n <= 5 n <= length? s s/:n = #"~"][
+        either all [n >= 3 n <= 6 n <= length? s s/:n = #"~"][
             prefix: copy/part at s 2 (n - 2)
             text: copy at s (n + 1)
 
@@ -88,6 +93,7 @@ context [
                     ch = #"b" [bold: true]
                     ch = #"i" [italic: true]
                     ch = #"u" [underline: true]
+                    ch = #"m" [mono: true]
                     ch = #"h" [
                         if (i + 1) <= length? prefix [
                             ch: prefix/(i + 1)
@@ -106,7 +112,7 @@ context [
             text: s
         ]
 
-        reduce [bold italic underline heading text]
+        reduce [bold italic underline mono heading text]
     ]
 
     select-style-font: func [
@@ -114,11 +120,17 @@ context [
         out [string!]
         bold [logic!]
         italic [logic!]
+        mono [logic!]
         heading [integer!]
     ][
         either heading > 0 [
             append out rejoin [
-                either bold [bold-font][either italic [italic-font][regular-font]]
+                case [
+                    mono [either bold [mono-bold-font][mono-font]]
+                    bold [bold-font]
+                    italic [italic-font]
+                    true [regular-font]
+                ]
                 " findfont "
                 case [
                     heading = 1 [24]
@@ -131,6 +143,10 @@ context [
         ][
             append out rejoin [
                 case [
+                    all [mono bold italic] [mono-bold-italic-font]
+                    all [mono italic] [mono-italic-font]
+                    all [mono bold] [mono-bold-font]
+                    mono [mono-font]
                     all [bold italic] [bold-italic-font]
                     bold [bold-font]
                     italic [italic-font]
@@ -190,14 +206,14 @@ context [
         /local style
     ][
         style: parse-style text
-        either any [style/1 style/2 style/3 style/4 > 0][
-            select-style-font out style/1 style/2 style/4
+        either any [style/1 style/2 style/3 style/4 style/5 > 0][
+            select-style-font out style/1 style/2 style/4 style/5
             case [
-                align = "C" [emit-text/center out x y style/5 col-w]
-                align = "R" [emit-text/right out x y style/5 col-w]
-                true [emit-text out x y style/5]
+                align = "C" [emit-text/center out x y style/6 col-w]
+                align = "R" [emit-text/right out x y style/6 col-w]
+                true [emit-text out x y style/6]
             ]
-            if style/3 [emit-underline out x y style/5 col-w align]
+            if style/3 [emit-underline out x y style/6 col-w align]
             emit-font out default-font
         ][
             emit-font out default-font
@@ -314,7 +330,7 @@ context [
         /local style text
     ][
         style: parse-style line
-        either any [style/1 style/2 style/3 style/4 > 0][
+        either any [style/1 style/2 style/3 style/4 style/5 > 0][
             emit-styled out margin-left page-y line 0 "L" regular-font
         ][
             case [

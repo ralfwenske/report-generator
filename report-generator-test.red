@@ -331,5 +331,50 @@ view/options layout [
         ]
     ]
 
+    button "Mono Font" blue [
+        header: [
+            ["~m~ACME Corp" "~mi~Mono Demo" "~mu~Internal"]
+            ""
+        ]
+
+        content: copy [
+            "~m~Monospaced text is ideal for aligned columns."
+            "~mb~Bold mono for emphasis."
+            "~mi~Italic mono for variety."
+            "~mbui~Bold italic underline mono."
+            ""
+            "~m~Column alignments in mono:"
+            ""
+        ]
+
+        append/only content reduce [
+            'table
+            ["~m~Name" 150 "L" "~m~Value" 80 "R" "~m~Code" 100 "C"]
+            ["~m~Alpha" "123.45" "AB-001"]
+            ["~m~Beta" "67.89" "CD-002"]
+            ["~m~Gamma" "901.23" "EF-003"]
+            ["~mb~TOTAL" "1092.57" ""]
+        ]
+
+        append content [
+            ""
+            "~m~Regular mono"
+            "~mb~Bold mono"
+            "~mi~Italic mono"
+            ""
+            "~h2~Headings still use proportional font"
+        ]
+
+        footer: [
+            ["~m~Mono Demo" "%TIME%" "~mb~Page %PAGE% of %PAGES%"]
+        ]
+
+        either preview/data [
+            generate-report/browser header content footer %reports/mono-report.pdf
+        ][
+            generate-report header content footer %reports/mono-report.pdf
+        ]
+    ]
+
     button "Exit" red [unview]
 ][size: 700x430]
