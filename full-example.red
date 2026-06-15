@@ -6,7 +6,7 @@ widgetC: reduce ["Widget C" "245" (to-money 8890.00)]
 threethousand: 3000
 
 ;---------------------------------------------------------
-generate-report/no-print 
+generate-report 
     [ ;HEADER
         ["ACME Corp" "~h1~Quarterly Report" "~iu~Confidential"]
         ["" "%DATETIME%"]

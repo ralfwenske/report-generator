@@ -452,7 +452,7 @@ context [
         content [block!]        "Mixed content: strings for text, 'table blocks for tables"
         footer [block! none!]   "Optional footer lines (supports %DATE%/%TIME%/%DATETIME%/%PAGE%/%PAGES% tokens)"
         output [file!]          "Output PDF file path"
-        /no-print               "Generate PDF but do not send to printer"
+        /browser                "Generate PDF and open in default PDF viewer"
         /local usable-top usable-bottom page-bottom
             pages page-num page-content page-y
             item out-ps total-pages ps-file pdf-file p page-ps
@@ -605,11 +605,11 @@ context [
         pdf-file: output
 
         write ps-file out-ps
-
         call/wait rejoin ["ps2pdf " ps-file " " pdf-file]
-        delete ps-file
-        unless no-print [
-            call/wait rejoin ["lpr " pdf-file]
+
+        if browser [
+            browse pdf-file
         ]
-    ]
+        delete ps-file
+    ] ; generate-report
 ];context

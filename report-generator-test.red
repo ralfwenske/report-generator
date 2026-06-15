@@ -7,6 +7,7 @@ do %report-generator.red
 view/options layout [
     below
     text 350x20 "Report Generator Test" bold white center
+    preview: check "Preview" false
 
     button "Text Report" blue [
         header: [
@@ -24,7 +25,11 @@ view/options layout [
 
         footer: [["Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]]
 
-        generate-report/no-print header content footer %reports/text-report.pdf
+        either preview/data [
+            generate-report/browser header content footer %reports/text-report.pdf
+        ][
+            generate-report header content footer %reports/text-report.pdf
+        ]
     ]
 
     button "Table Report" blue [
@@ -41,7 +46,11 @@ view/options layout [
 
         footer: [["Page %PAGE% of %PAGES%" "" "%TIME%"]]
 
-        generate-report/no-print header content footer %reports/table-report.pdf
+        either preview/data [
+            generate-report/browser header content footer %reports/table-report.pdf
+        ][
+            generate-report header content footer %reports/table-report.pdf
+        ]
     ]
 
     button "Unified Report (text + tables)" blue [
@@ -115,7 +124,11 @@ view/options layout [
             ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
         ]
 
-        generate-report/no-print header content footer %reports/unified-report.pdf
+        either preview/data [
+            generate-report/browser header content footer %reports/unified-report.pdf
+        ][
+            generate-report header content footer %reports/unified-report.pdf
+        ]
     ]
 
     button "Report with page breaks" blue [
@@ -162,7 +175,11 @@ view/options layout [
 
         footer: [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
 
-        generate-report/no-print header content footer %reports/pagebreak-report.pdf
+        either preview/data [
+            generate-report/browser header content footer %reports/pagebreak-report.pdf
+        ][
+            generate-report header content footer %reports/pagebreak-report.pdf
+        ]
     ]
 
     button "Multi-column Header/Footer" blue [
@@ -189,7 +206,7 @@ view/options layout [
             ["*TOTAL*" "$46500" "$52900" "$99400"]
         ]
 
-        repeat x 30 [
+        repeat x 40 [
             append content rejoin ["Detail line #" x ": Additional supporting data for the quarterly analysis."]
         ]
 
@@ -197,7 +214,11 @@ view/options layout [
             ["ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
         ]
 
-        generate-report/no-print header content footer %reports/multicolumn-report.pdf
+        either preview/data [
+            generate-report/browser header content footer %reports/multicolumn-report.pdf
+        ][
+            generate-report header content footer %reports/multicolumn-report.pdf
+        ]
     ]
 
     button "Center-aligned Columns" blue [
@@ -233,7 +254,11 @@ view/options layout [
             ["Company Inc" "%DATE%" "Page %PAGE% of %PAGES%"]
         ]
 
-        generate-report/no-print header content footer %reports/center-align-report.pdf
+        either preview/data [
+            generate-report/browser header content footer %reports/center-align-report.pdf
+        ][
+            generate-report header content footer %reports/center-align-report.pdf
+        ]
     ]
 
     button "Text Styles" blue [
@@ -280,7 +305,11 @@ view/options layout [
             ["~i~ACME Corp" "%TIME%" "~b~Page %PAGE% of %PAGES%"]
         ]
 
-        generate-report/no-print header content footer %reports/text-styles-report.pdf
+        either preview/data [
+            generate-report/browser header content footer %reports/text-styles-report.pdf
+        ][
+            generate-report header content footer %reports/text-styles-report.pdf
+        ]
     ]
 
     button "Exit" red [unview]

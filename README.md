@@ -1,14 +1,14 @@
 # report-generator.red
 
-A Red module that generates multi-page A4 PDF reports with mixed text and table content, ready for printing via CUPS/lpr.
+A Red module that generates multi-page A4 PDF reports with mixed text and table content.
 
 ![image](reports/full-example.png)
 
 ## How it works
 
-The module generates PostScript, converts it to PDF via `ps2pdf` (Ghostscript), and optionally sends it to the default printer via `lpr`. All rendering happens in PostScript — no external PDF libraries needed.
+The module generates PostScript, converts it to PDF via `ps2pdf` (Ghostscript), and optionally opens the PDF in the default viewer via `browse`. All rendering happens in PostScript — no external PDF libraries needed.
 
-**Dependencies:** Red, Ghostscript (`ps2pdf`), CUPS (`lpr`)
+**Dependencies:** Red, Ghostscript (`ps2pdf`)
 
 ## Usage
 
@@ -20,7 +20,7 @@ do %report-generator.red
 
 ```red
 generate-report header content footer %report.pdf
-generate-report/no-print header content footer %report.pdf   ; skip printing, just generate PDF
+generate-report/browser header content footer %report.pdf   ; generate and open in default PDF viewer
 ```
 
 | Argument | Type | Description |
@@ -28,7 +28,7 @@ generate-report/no-print header content footer %report.pdf   ; skip printing, ju
 | `header` | `block!` or `none!` | Lines printed at the top of every page (bold). Each line can be a string or a block of 1–3 strings for multi-column layout. Supports `%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%` tokens. |
 | `content` | `block!` | Mixed text lines and table definitions |
 | `footer` | `block!` or `none!` | Lines printed at the bottom of every page. Same format as header. Same token support. |
-| `output` | `file!` | Output PDF file path. A `.ps` file is also created alongside it. |
+| `output` | `file!` | Output PDF file path |
 
 ### Content block
 
@@ -210,7 +210,7 @@ widgetC: reduce ["Widget C" "245" (to-money 8890.00)]
 threethousand: 3000
 
 ;---------------------------------------------------------
-generate-report/no-print 
+generate-report 
     [ ;HEADER
         ["ACME Corp" "~h1~Quarterly Report" "~iu~Confidential"]
         ["" "%DATETIME%"]
@@ -250,9 +250,8 @@ The output PDF is written to the `reports/` directory (which is gitignored).
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
 | `full-example.red` | Minimal full example — run with `red full-example.red` |
-| `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, and style demos |
+| `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, and style demos. Includes a Preview checkbox to open the PDF in the default viewer. |
 | `reports/` | Output directory for generated PDFs (gitignored) |
-| `*.ps` | Generated PostScript (created alongside the PDF) |
 | `*.pdf` | Generated PDF (filename specified by the `output` parameter) |
 
 ## Architecture
@@ -286,4 +285,4 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 1. Content is processed page by page, tracking `page-y` position
 2. Each page's PostScript is collected into a `pages` block
 3. During final assembly, tokens (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`) are replaced in each page's PostScript (covers headers), then footers are emitted
-4. The final PS file is assembled with DSC comments, converted to PDF, and sent to the printer
+4. The final PS file is assembled with DSC comments, converted to PDF, and optionally opened in the default viewer
