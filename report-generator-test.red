@@ -62,11 +62,13 @@ view/options layout [
         i: 0
         content: copy []
 
-        append content "*Sales Summary*"
-        append content ""
-        append content "Below is the Q1 sales data for all product lines."
-        append content "Revenue targets were met across all categories."
-        append content ""
+        append content [
+            "*Sales Summary*"
+            ""
+            "Below is the Q1 sales data for all product lines."
+            "Revenue targets were met across all categories."
+            ""
+        ]
 
         append/only content reduce [
             'table
@@ -94,11 +96,13 @@ view/options layout [
             i: i + 1
             append content rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]
         ]
-        append content "^L"
-        append content "*Expenses*"
-        append content ""
-        append content "Operating expenses for the quarter."
-        append content ""
+        append content [
+            "^L"
+            "*Expenses*"
+            ""
+            "Operating expenses for the quarter."
+            ""
+        ]
 
         append/only content reduce [
             'table
@@ -114,10 +118,12 @@ view/options layout [
             append content rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]
         ]
 
-        append content ""
-        append content "*Net Profit: $4157.00*"
-        append content ""
-        append content "_End of quarterly report_"
+        append content [
+            ""
+            "*Net Profit: $4157.00*"
+            ""
+            "_End of quarterly report_"
+        ]
 
         footer: [
             ["" "ACME Corp - Confidential" ""]
@@ -135,8 +141,10 @@ view/options layout [
         header: ["Inventory Report"]
 
         content: copy []
-        append content "Full inventory listing:"
-        append content ""
+        append content [
+            "Full inventory listing:"
+            ""
+        ]
 
         append/only content reduce [
             'table
@@ -170,8 +178,10 @@ view/options layout [
             ["26" "Item Z" "$2600.00"]
         ]
 
-        append content ""
-        append content "End of inventory."
+        append content [
+            ""
+            "End of inventory."
+        ]
 
         footer: [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
 
@@ -190,11 +200,13 @@ view/options layout [
         ]
 
         content: copy []
-        append content "This report demonstrates multi-column header and footer lines."
-        append content "The header has left, center, and right text on each line."
-        append content ""
-        append content "*Sales by Region*"
-        append content ""
+        append content [
+            "This report demonstrates multi-column header and footer lines."
+            "The header has left, center, and right text on each line."
+            ""
+            "*Sales by Region*"
+            ""
+        ]
 
         append/only content reduce [
             'table
@@ -228,8 +240,10 @@ view/options layout [
         ]
 
         content: copy []
-        append content "Table below demonstrates center-aligned columns using ^"C^"."
-        append content ""
+        append content [
+            "Table below demonstrates center-aligned columns using ^"C^"."
+            ""
+        ]
 
         append/only content reduce [
             'table
@@ -244,10 +258,12 @@ view/options layout [
             ["X-002" "Mounting Bracket" "Accessories" "$8.50"]
         ]
 
-        append content ""
-        append content "SKU and Category columns are center-aligned."
-        append content "Price column is right-aligned."
-        append content "Product Name is left-aligned."
+        append content [
+            ""
+            "SKU and Category columns are center-aligned."
+            "Price column is right-aligned."
+            "Product Name is left-aligned."
+        ]
 
         footer: [
             ["" "Center-aligned demo" ""]
@@ -267,24 +283,25 @@ view/options layout [
             ""
         ]
 
-        content: copy []
-        append content "~b~Bold Title"
-        append content ""
-        append content "~i~This line is italic."
-        append content "~u~This line is underlined."
-        append content "~bi~This line is bold italic."
-        append content "~bu~This line is bold and underlined."
-        append content "~iu~This line is italic and underlined."
-        append content "~biu~This line is bold, italic and underlined."
-        append content ""
-        append content "~h1~Heading Level 1"
-        append content "~h2~Heading Level 2"
-        append content "~h3~Heading Level 3"
-        append content ""
-        append content "Regular text with legacy *bold* and _underline_ inline markup."
-        append content ""
-        append content "~b~Styled table cells below:"
-        append content ""
+        content: copy [
+            "~b~Bold Title"
+            ""
+            "~i~This line is italic."
+            "~u~This line is underlined."
+            "~bi~This line is bold italic."
+            "~bu~This line is bold and underlined."
+            "~iu~This line is italic and underlined."
+            "~biu~This line is bold, italic and underlined."
+            ""
+            "~h1~Heading Level 1"
+            "~h2~Heading Level 2"
+            "~h3~Heading Level 3"
+            ""
+            "Regular text with legacy *bold* and _underline_ inline markup."
+            ""
+            "~b~Styled table cells below:"
+            ""
+        ]
 
         append/only content reduce [
             'table
@@ -295,11 +312,13 @@ view/options layout [
             ["Regular Item" "Active" "$100.00"]
         ]
 
-        append content ""
-        append content "~h2~Summary"
-        append content ""
-        append content "Prefixes: b=bold i=italic u=underline h1/h2/h3=headings"
-        append content "Combine letters: bi bu iu biu (any order)"
+        append content [
+            ""
+            "~h2~Summary"
+            ""
+            "Prefixes: b=bold i=italic u=underline h1/h2/h3=headings"
+            "Combine letters: bi bu iu biu (any order)"
+        ]
 
         footer: [
             ["~i~ACME Corp" "%TIME%" "~b~Page %PAGE% of %PAGES%"]
