@@ -198,7 +198,16 @@ context [
         either join [
             either any-style? [
                 select-style-font out styles
+                ; save start x for underline
+                append out rejoin ["/_ulx _jx def" lf]
                 emit-text-join out y text
+                if style-has styles 'u [
+                    append out rejoin [
+                        "gsave newpath"
+                        " _ulx " (y - 2) " moveto"
+                        " (" ps-escape text ") stringwidth pop 0 rlineto stroke grestore" lf
+                    ]
+                ]
             ][
                 emit-font out regular-font
                 emit-text-join out y text
@@ -569,6 +578,19 @@ context [
         ]
     ]
 
+    line-height-for: func [
+        "Return effective line height for a content line block"
+        line-block [block!]
+        /local v
+    ][
+        foreach v line-block [
+            if v = 'h1 [return 30]
+            if v = 'h2 [return 24]
+            if v = 'h3 [return 20]
+        ]
+        line-height
+    ]
+
     emit-content-line: func [
         out [string!]
         line-block [block!]
@@ -914,9 +936,9 @@ context [
                         ]
                     ]
                 ][
-                    if (page-y - line-height) < page-bottom [new-page]
+                    if (page-y - line-height-for item) < page-bottom [new-page]
                     emit-content-line page-content item page-y
-                    page-y: page-y - line-height
+                    page-y: page-y - line-height-for item
                 ]
             ][
                 if string? item [

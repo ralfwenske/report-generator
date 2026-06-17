@@ -2,7 +2,7 @@
 
 A Red module that generates multi-page A4 PDF reports with mixed text and tables.
 
-![image](reports/full-example.png)
+![image](reports/simple-example.png)
 
 ## How it works
 

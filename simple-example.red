@@ -14,10 +14,32 @@ generate-report
     ] ;header
 
     [ ;CONTENT
-        ['b "Sales Summary for " /b 'u "Q1 2015" /u]
-        ["Q1 sales data for all product lines."]
+        ['b "Sales Summary for " 'u "Q1 2015"]
+        ['u "Q1 sales data for all product lines."]
+        []
+        ['b "'table" 'i " 'box 'alt"]
         [
             'table 'box 'alt
+            ['< 180 "Product" '^ 60 5.4 "Qty" '> 80 'money "Total"]
+            ["Widget A" 120 'b threethousand]
+            ["Widget B" "45" total]
+            widgetC
+            ['b "TOTALS" /b "" "$13'780.00"]
+        ]
+        []
+        ['i "'table 'alt"]
+        [
+            'table 'alt
+            ['< 180 'b "Product" '^ 60 5.4 "Qty" '> 80 'money "Total"]
+            ["Widget A" 120 'b threethousand]
+            ["Widget B" "45" total]
+            widgetC
+            ['b "TOTALS" /b "" "$13'780.00"]
+        ]
+        []
+        ['i "'table"]
+        [
+            'table 
             ['< 180 "Product" '^ 60 5.4 "Qty" '> 80 'money "Total"]
             ["Widget A" 120 'b threethousand]
             ["Widget B" "45" total]
