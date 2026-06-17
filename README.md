@@ -222,7 +222,7 @@ See [`example-full.red`](example-full.red) — run with `red example-full.red`. 
 
 ### GUI test harness
 
-See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate individual demo PDFs. Run with `red report-generator-test.red`. Includes a Preview checkbox to open PDFs in the default viewer.
+See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate individual demo PDFs. Run with `red-view report-generator-test.red`. Includes a Preview checkbox to open PDFs in the default viewer.
 
 ## File overview
 
