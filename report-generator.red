@@ -746,10 +746,16 @@ context [
         ]
     ]
 
-    eval-val: func [v][
+    eval-val: func [v /local val][
         case [
-            word? v [get v]
-            get-word? v [get v]
+            word? v [
+                val: attempt [get v]
+                either val [val][v]
+            ]
+            get-word? v [
+                val: attempt [get v]
+                either val [val][v]
+            ]
             true [v]
         ]
     ]
@@ -757,41 +763,48 @@ context [
     is-table-block: func [item [block!]][
         all [
             not empty? item
-            (eval-val item/1) = 'table
+            item/1 = 'table
         ]
     ]
 
-    table-is-boxed: func [item [block!] /local idx v][
+    table-is-boxed: func [item [block!] /local idx v found][
         idx: 2
-        while [idx <= length? item][
+        found: false
+        while [all [idx <= length? item not found]][
             v: eval-val pick item idx
-            if string? v [return false]
-            if v = 'box [return true]
-            if v = 'alt [idx: idx + 1 continue]
-            idx: idx + 1
+            case [
+                string? v [found: true]
+                v = 'box [found: true]
+                true [idx: idx + 1]
+            ]
         ]
-        false
+        v = 'box
     ]
 
-    table-has-alt: func [item [block!] /local idx v][
+    table-has-alt: func [item [block!] /local idx v found][
         idx: 2
-        while [idx <= length? item][
+        found: false
+        while [all [idx <= length? item not found]][
             v: eval-val pick item idx
-            if string? v [return false]
-            if v = 'alt [return true]
-            if v = 'box [idx: idx + 1 continue]
-            idx: idx + 1
+            case [
+                string? v [found: true]
+                v = 'alt [found: true]
+                true [idx: idx + 1]
+            ]
         ]
-        false
+        v = 'alt
     ]
 
-    table-col-index: func [item [block!] /local idx v][
+    table-col-index: func [item [block!] /local idx v found][
         idx: 2
-        while [idx <= length? item][
+        found: false
+        while [all [idx <= length? item not found]][
             v: eval-val pick item idx
-            if string? v [return idx]
-            if any [v = 'box v = 'alt] [idx: idx + 1 continue]
-            return idx
+            case [
+                string? v [found: true]
+                any [v = 'box v = 'alt] [idx: idx + 1]
+                true [found: true]
+            ]
         ]
         idx
     ]
