@@ -35,7 +35,7 @@ generate-report/browser header content footer %report.pdf   ; generate and open 
 
 | Argument | Type | Description |
 |----------|------|-------------|
-| `header` | `block!` or `none!` | Lines shown at the top of every page. Supports lit-word style tags and `%DATE%`/`%TIME%`/`%DATETIME%`/`%PAGE%`/`%PAGES%` tokens. |
+| `header` | `block!` or `none!` | Lines shown at the top of every page. Supports style tags and `%DATE%`/`%TIME%`/`%DATETIME%`/`%PAGE%`/`%PAGES%` tokens. |
 | `content` | `block!` | Mixed content: blocks for text lines, `'table` blocks for tables |
 | `footer` | `block!` or `none!` | Lines shown at the bottom of every page. Same format and token support as header. |
 | `output` | `file!` | Output PDF file path |
@@ -56,15 +56,15 @@ append content [""]
 append/only content reduce [
     'table 'box 'alt
     ['< 200 "Name" '> 100 "Amount"]
-    ["Widget" "$25.00"]
-    ["Gadget" "$42.00"]
+    ["Widget" 25.00]
+    ["Gadget" 42.00]
 ]
 append content ["Text after table"]
 ```
 
 ## Style tags
 
-Styles are applied using lit-word tags (`'b`) to turn on and refinement tags (`/b`) to turn off. Styles stack and auto-close at the end of each line block.
+Styles use lit-word tags (`'b`) to turn on and refinement tags (`/b`) to turn off. Styles stack and auto-close at the end of each line block.
 
 | Tag | End tag | Style |
 |-----|---------|-------|
@@ -72,9 +72,9 @@ Styles are applied using lit-word tags (`'b`) to turn on and refinement tags (`/
 | `'i` | `/i` | *Italic* |
 | `'u` | `/u` | Underline |
 | `'m` | `/m` | Monospace (Courier) |
-| `'h1` | `/h1` | Heading 1 (24pt bold) |
-| `'h2` | `/h2` | Heading 2 (18pt bold) |
-| `'h3` | `/h3` | Heading 3 (14pt bold) |
+| `'h1` | `/h1` | Heading 1 (24pt) |
+| `'h2` | `/h2` | Heading 2 (18pt) |
+| `'h3` | `/h3` | Heading 3 (14pt) |
 
 Line-level modifiers (`'m`, `'h1`, `'h2`, `'h3`) can only appear at the start of a content line block and apply to the entire line.
 
@@ -91,22 +91,6 @@ End tags are optional — unclosed styles auto-close at the end of each line.
 ```
 
 Works in headers, footers, content lines, and table cells.
-
-### Header and footer style tags
-
-Header and footer lines support the same style tags. Each line is a block with up to 3 text segments, positioned left, center, and right:
-
-```red
-header: [
-    ['h1 "ACME Corp" /h1 'b "Report" /b "Confidential"]
-    ['b "%DATETIME%" /b]
-]
-footer: [
-    ['b "ACME Corp" /b "%TIME%" "Page %PAGE% of %PAGES%"]
-]
-```
-
-Segments without explicit styles in headers default to bold. Segments in footers default to regular.
 
 ## Column definitions
 
@@ -126,7 +110,7 @@ Table columns are defined by a block of values after `'table` (and optional modi
 | `5.4` | Format numbers with 4 decimal places |
 | `180` | Set column width in points |
 
-Modifiers before each column title string apply to that column. Each column is: optional modifiers + width + title string.
+Modifiers before each column title string apply to that column.
 
 ## Table modifiers
 
@@ -135,9 +119,7 @@ Modifiers before each column title string apply to that column. Each column is: 
 | `'box` | Draw outer border around table |
 | `'alt` | Alternate row background (light gray on even rows) |
 
-Both can be combined: `'table 'box 'alt`. Without modifiers, the table has no outer border and no alternating rows. Column separators are always drawn.
-
-Header rows always have a gray background regardless of modifiers.
+Both can be combined: `'table 'box 'alt`. Without modifiers, the table has no outer border and no alternating rows. Column separators are always drawn. Header rows always have a gray background.
 
 ### Table examples
 
@@ -155,14 +137,7 @@ Header rows always have a gray background regardless of modifiers.
 [
     'table
     ['< 200 "Name" '> 100 "Amount"]
-    ["Item A" "$100.00"]
-]
-
-; Boxed table with column-level bold data
-[
-    'table 'box
-    ['< 'b 150 "Item" '> 80 "Qty" '> 100 "Price"]
-    ["Widget" 10 25.00]
+    ["Item A" 100.00]
 ]
 ```
 
@@ -176,26 +151,15 @@ Use a row where the first column is `"^L"` to break a table across pages. The ta
 
 ## Number and money formatting
 
-Numbers in table cells are automatically formatted based on the column definition:
+Numbers in table cells are formatted automatically based on the column definition:
 
 - **`'money`** — formats as `$1'234.50` with thousands separator and 2 decimal places
-- **`5.4`** — formats with 4 decimal places (the digit after the dot)
-- **No format** — numbers are displayed as-is via `form`
-- **Strings** — always displayed as-is (no formatting)
+- **`5.4`** — formats with 4 decimal places
+- **No format** — numbers displayed as-is
 
-Numbers can be Red integers, floats, or money values. Words that evaluate to numbers are also supported (e.g., `threethousand` where `threethousand: 3000`).
-
-```red
-['table 'box 'alt
-    ['< 150 "Item" '> 80 "Qty" '> 100 5.4 "Weight" '> 100 'money "Price"]
-    ["Widget" 100 3.14159 25.00]
-    ["Gadget" 50 0.001 42.50]
-]
-```
+Numbers can be Red integers, floats, or words that evaluate to numbers.
 
 ## Header and footer tokens
-
-Tokens can be used in both header and footer lines. Date and time are captured once when `generate-report` is called, so they are consistent across all pages.
 
 | Token | Replaced with | Example output |
 |-------|---------------|----------------|
@@ -204,12 +168,6 @@ Tokens can be used in both header and footer lines. Date and time are captured o
 | `%DATE%` | Current date | `2026-06-13` |
 | `%TIME%` | Current time (hh:mm) | `19:04` |
 | `%DATETIME%` | Date and time combined | `2026-06-13 19:04` |
-
-```red
-footer: [
-    ['b "Page %PAGE% of %PAGES%" /b "" "%DATETIME%"]
-]
-```
 
 ## Page layout
 
@@ -220,9 +178,11 @@ footer: [
 - Table headers: always bold with gray background
 - Column separators: thin 0.5pt lines
 
-## Full example
+## Examples
 
-See [`full-example.red`](full-example.red) — run it with `red full-example.red`:
+### Simple example
+
+See [`simple-example.red`](simple-example.red) — run with `red simple-example.red`:
 
 ```red
 Red []
@@ -231,47 +191,48 @@ do %report-generator.red
 
 widgetC: ["Widget C" "245" 8890.00]
 threethousand: 3000
-total: 1890.0
 
-;---------------------------------------------------------
 generate-report 
-    [ ;HEADER
+    [
         ['h1 "ACME Corp" /h1 'b "Quarterly Report" /b "Confidential"]
         [" " " " 'b "%DATETIME%"]
-    ] ;header
-
-    [ ;CONTENT
+    ]
+    [
         ['b "Sales Summary for " /b 'u "Q1 2015" /u]
         ["Q1 sales data for all product lines."]
         [
             'table 'box 'alt
             ['< 180 "Product" '^ 60 5.4 "Qty" '> 80 'money "Total"]
             ["Widget A" 120 'b threethousand]
-            ["Widget B" "45" total]
+            ["Widget B" "45" 1890.0]
             widgetC
             ['b "TOTALS" /b "" "$13'780.00"]
         ]
         ["End of report."]
-    ] ;content
-
-    [ ;FOOTER
+    ]
+    [
         ['b "ACME Corp" /b "%TIME%" "Page %PAGE% of %PAGES%"]
-    ] ;footer
-
-    %reports/full-example.pdf
+    ]
+    %reports/simple-example.pdf
 ```
 
-The output PDF is written to the `reports/` directory (which is gitignored).
+### Full example
+
+See [`full-example.red`](full-example.red) — run with `red full-example.red`. Generates a multi-page PDF demonstrating all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, center-aligned columns, styled table cells, dynamic content, and table page breaks.
+
+### GUI test harness
+
+See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate individual demo PDFs. Run with `red report-generator-test.red`. Includes a Preview checkbox to open PDFs in the default viewer.
 
 ## File overview
 
 | File | Purpose |
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
-| `full-example.red` | Full example — run with `red full-example.red` |
-| `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, style, mono, and number formatting demos. Includes a Preview checkbox to open the PDF in the default viewer. |
+| `simple-example.red` | Simple example — run with `red simple-example.red` |
+| `full-example.red` | Full example with all features — run with `red full-example.red` |
+| `report-generator-test.red` | GUI test harness with individual demo buttons |
 | `reports/` | Output directory for generated PDFs (gitignored) |
-| `*.pdf` | Generated PDF (filename specified by the `output` parameter) |
 
 ## Architecture
 
@@ -284,27 +245,27 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 | `ps-escape` | Escapes `\`, `(`, `)` in PostScript strings |
 | `emit-font` | Emits a PostScript font selection command |
 | `emit-text` | Emits a left/center/right-aligned text drawing command |
-| `emit-text-join` | Emits left-aligned text using PS `currentpoint` chaining for inline segments |
+| `emit-text-join` | Emits left-aligned text using PS `currentpoint` chaining |
 | `emit-text-start` | Initializes PS variables for a joined line |
 | `emit-underline` | Draws an underline beneath text |
-| `emit-styled-text` | Selects font, emits aligned text with styles, handles underline |
+| `emit-styled-text` | Selects font, emits aligned text with styles |
 | `emit-rect` | Emits a stroked rectangle |
 | `emit-filled-rect` | Emits a filled rectangle with gray fill |
 | `emit-vline` | Emits a thin vertical line (column separator) |
-| `emit-header-v2` | Emits header lines with L/C/R positioning and style support |
-| `emit-footer-v2` | Emits footer lines with token replacement and style support |
-| `emit-content-line` | Processes a content line block, extracting line-level modifiers |
+| `emit-header-v2` | Emits header lines with L/C/R positioning and styles |
+| `emit-footer-v2` | Emits footer lines with token replacement and styles |
+| `emit-content-line` | Processes a content line block |
 | `emit-table-header-v2` | Emits a table header row with gray background |
 | `emit-table-row-v2` | Emits a table data row with style and format support |
-| `process-line-values` | Parses style tags from a block into `[styles text ...]` pairs |
-| `parse-columns-v2` | Parses column definitions into titles, widths, alignments, formats |
-| `format-number-value` | Formats numbers as money or with specified decimal places |
-| `format-decimal` | Formats numbers with thousands separators and decimal places |
-| `end-tag-target` | Maps refinement end-tags to their corresponding style words |
+| `process-line-values` | Parses style tags into `[styles text ...]` pairs |
+| `parse-columns-v2` | Parses column definitions |
+| `format-number-value` | Formats numbers as money or with decimal places |
+| `format-decimal` | Formats numbers with thousands separators |
+| `end-tag-target` | Maps refinement end-tags to style words |
 
 **Rendering pipeline:**
 
 1. Content is processed page by page, tracking `page-y` position
 2. Each page's PostScript is collected into a `pages` block
-3. During final assembly, tokens (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`) are replaced in each page's PostScript, then footers are emitted
-4. The final PS file is assembled with DSC comments, converted to PDF, and optionally opened in the default viewer
+3. Tokens are replaced per page, footers are emitted
+4. Final PS is assembled with DSC comments, converted to PDF
