@@ -2,7 +2,7 @@
 
 A Red module that generates multi-page A4 PDF reports with mixed text and tables.
 
-![image](reports/simple-example.png)
+![image](reports/example-simple.png)
 
 ## How it works
 
@@ -182,7 +182,7 @@ Numbers can be Red integers, floats, or words that evaluate to numbers.
 
 ### Simple example
 
-See [`simple-example.red`](simple-example.red) — run with `red simple-example.red`:
+See [`example-simple.red`](example-simple.red) — run with `red example-simple.red`:
 
 ```red
 Red []
@@ -213,12 +213,12 @@ generate-report
     [
         ['b "ACME Corp" /b "%TIME%" "Page %PAGE% of %PAGES%"]
     ]
-    %reports/simple-example.pdf
+    %reports/example-simple.pdf
 ```
 
 ### Full example
 
-See [`full-example.red`](full-example.red) — run with `red full-example.red`. Generates a multi-page PDF demonstrating all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, center-aligned columns, styled table cells, dynamic content, and table page breaks.
+See [`example-full.red`](example-full.red) — run with `red example-full.red`. Generates a multi-page PDF demonstrating all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, center-aligned columns, styled table cells, dynamic content, and table page breaks.
 
 ### GUI test harness
 
@@ -229,8 +229,8 @@ See [`report-generator-test.red`](report-generator-test.red) — a GUI with butt
 | File | Purpose |
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
-| `simple-example.red` | Simple example — run with `red simple-example.red` |
-| `full-example.red` | Full example with all features — run with `red full-example.red` |
+| `example-simple.red` | Simple example — run with `red example-simple.red` |
+| `example-full.red` | Full example with all features — run with `red example-full.red` |
 | `report-generator-test.red` | GUI test harness with individual demo buttons |
 | `reports/` | Output directory for generated PDFs (gitignored) |
 

@@ -53,4 +53,4 @@ generate-report
         ['b "ACME Corp" /b "%TIME%" "Page %PAGE% of %PAGES%"]
     ] ;footer
 
-    %reports/simple-example.pdf
+    %reports/example-simple.pdf
