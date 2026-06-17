@@ -11,19 +11,18 @@ view/options layout [
 
     button "Text Report" blue [
         header: [
-            "ACME Corporation"
-            "Monthly Sales Report"
-            ""
+            ["ACME Corp" "Monthly Sales Report"]
+            [" " " " 'b "%DATETIME%"]
         ]
 
         content: copy []
         i: 0
         while [i < 60][
             i: i + 1
-            append content rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]
+            append/only content reduce [['b rejoin ["Record #" i ": "] /b rejoin ["Product widget #" i " - Qty: " (i * 3)]]]
         ]
 
-        footer: [["Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]]
+        footer: [['b "Confidential" /b "%DATE%" "Page %PAGE% of %PAGES%"]]
 
         either preview/data [
             generate-report/browser header content footer %reports/text-report.pdf
@@ -38,7 +37,7 @@ view/options layout [
         content: copy []
         append/only content reduce [
             'table
-            ["Product" 180 "L" "Qty" 60 "R" "Price" 80 "R" "Total" 80 "R"]
+            ['< 180 "Product" '> 60 "Qty" '> 80 "Price" '> 80 "Total"]
             ["Widget A" "10" "$25.00" "$250.00"]
             ["Widget B" "5" "$42.00" "$210.00"]
             ["Gadget X" "23" "$12.50" "$287.50"]
@@ -53,76 +52,75 @@ view/options layout [
         ]
     ]
 
-    button "Unified Report (text + tables)" blue [
+    button "Unified Report" blue [
         header: [
             "ACME Corporation"
             "Quarterly Report"
-            ""
         ]
+
         i: 0
         content: copy []
 
         append content [
-            "*Sales Summary*"
-            ""
-            "Below is the Q1 sales data for all product lines."
-            "Revenue targets were met across all categories."
-            ""
+            ['b "Sales Summary" /b]
+            [""]
+            ["Below is the Q1 sales data for all product lines."]
+            ["Revenue targets were met across all categories."]
         ]
 
         append/only content reduce [
-            'table
-            ["Product" 180 "L" "Qty" 60 "R" "Price" 80 "R" "Total" 80 "R"]
+            'table 'box 'alt
+            ['< 180 "Product" '> 60 "Qty" '> 80 "Price" '> 80 "Total"]
             ["Widget A" "120" "$25.00" "$3000.00"]
             ["Widget B" "45" "$42.00" "$1890.00"]
             ["Gadget X" "200" "$12.50" "$2500.00"]
             ["Gizmo Z" "33" "$99.00" "$3267.00"]
-            ["*TOTALS*" "" "" "$10657.00"]
+            ['b "TOTALS" /b "" "" "$10657.00"]
         ]
 
         repeat x 10 [
             i: i + 1
-            append content rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]
+            append/only content reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
         ]
 
         append/only content reduce [
             'table
-            ["Product" 180 "L" "Qty" 60 "R" "Price" 80 "R" "Total" 80 "R"]
+            ['< 180 "Product" '> 60 "Qty" '> 80 "Price" '> 80 "Total"]
             ["Widget A" "120" "$25.00" "$3000.00"]
             ["Widget B" "45" "$42.00" "$1890.00"]
         ]
 
         repeat x 7 [
             i: i + 1
-            append content rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]
+            append/only content reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
         ]
+
+        append content ["^L"]
         append content [
-            "^L"
-            "*Expenses*"
-            ""
-            "Operating expenses for the quarter."
-            ""
+            ['b "Expenses" /b]
+            [""]
+            ["Operating expenses for the quarter."]
         ]
 
         append/only content reduce [
             'table
-            ["Category" 200 "L" "Amount" 100 "R"]
+            ['< 200 "Category" '> 100 "Amount"]
             ["Rent" "$4500.00"]
             ["Utilities" "$1200.00"]
             ["Supplies" "$800.00"]
-            ["*TOTAL*" "$6500.00"]
+            ['b "TOTAL" /b "$6500.00"]
         ]
-   
+
         repeat x 40 [
             i: i + 1
-            append content rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]
+            append/only content reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
         ]
 
         append content [
-            ""
-            "*Net Profit: $4157.00*"
-            ""
-            "_End of quarterly report_"
+            [""]
+            ['b "Net Profit: $4157.00" /b]
+            [""]
+            ['u "End of quarterly report" /u]
         ]
 
         footer: [
@@ -137,18 +135,17 @@ view/options layout [
         ]
     ]
 
-    button "Report with page breaks" blue [
+    button "Page breaks" blue [
         header: ["Inventory Report"]
 
         content: copy []
         append content [
-            "Full inventory listing:"
-            ""
+            ["Full inventory listing:"]
         ]
 
         append/only content reduce [
-            'table
-            ["ID" 60 "R" "Name" 200 "L" "Amount" 100 "R"]
+            'table 'alt
+            ['> 60 "ID" '< 200 "Name" '> 100 "Amount"]
             ["1" "Item A" "$100.00"]
             ["2" "Item B" "$200.00"]
             ["3" "Item C" "$300.00"]
@@ -179,8 +176,7 @@ view/options layout [
         ]
 
         append content [
-            ""
-            "End of inventory."
+            ["End of inventory."]
         ]
 
         footer: [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
@@ -196,30 +192,28 @@ view/options layout [
         header: [
             ["ACME Corp" "Quarterly Report" "Confidential"]
             ["Dept: Sales" "" "%DATETIME%"]
-            ""
         ]
 
         content: copy []
         append content [
-            "This report demonstrates multi-column header and footer lines."
-            "The header has left, center, and right text on each line."
-            ""
-            "*Sales by Region*"
-            ""
+            ["This report demonstrates multi-column header and footer lines."]
+            ["The header has left, center, and right text on each line."]
+            [""]
+            ['b "Sales by Region" /b]
         ]
 
         append/only content reduce [
-            'table
-            ["Region" 160 "L" "Q1" 80 "R" "Q2" 80 "R" "Total" 80 "R"]
+            'table 'box 'alt
+            ['< 160 "Region" '> 80 "Q1" '> 80 "Q2" '> 80 "Total"]
             ["North" "$12000" "$14500" "$26500"]
             ["South" "$8500" "$9200" "$17700"]
             ["East" "$15000" "$16800" "$31800"]
             ["West" "$11000" "$12400" 23400]
-            ["*TOTAL*" "$46500" "$52900" "$99400"]
+            ['b "TOTAL" /b "$46500" "$52900" "$99400"]
         ]
 
         repeat x 40 [
-            append content rejoin ["Detail line #" x ": Additional supporting data for the quarterly analysis."]
+            append/only content reduce [rejoin ["Detail line #" x ": Additional supporting data for the quarterly analysis."]]
         ]
 
         footer: [
@@ -236,18 +230,16 @@ view/options layout [
     button "Center-aligned Columns" blue [
         header: [
             ["Product Catalog" "Item Listing" "Rev 3"]
-            ""
         ]
 
         content: copy []
         append content [
-            "Table below demonstrates center-aligned columns using ^"C^"."
-            ""
+            ["Table below demonstrates center-aligned columns using ^"."]
         ]
 
         append/only content reduce [
-            'table
-            ["SKU" 80 "C" "Product Name" 200 "L" "Category" 120 "C" "Price" 80 "R"]
+            'table 'alt
+            ['^ 80 "SKU" '< 200 "Product Name" '^ 120 "Category" '> 80 "Price"]
             ["W-001" "Widget Alpha" "Hardware" "$25.00"]
             ["W-002" "Widget Beta" "Hardware" "$42.00"]
             ["G-001" "Gadget Pro" "Electronics" "$99.00"]
@@ -259,10 +251,9 @@ view/options layout [
         ]
 
         append content [
-            ""
-            "SKU and Category columns are center-aligned."
-            "Price column is right-aligned."
-            "Product Name is left-aligned."
+            ["SKU and Category columns are center-aligned."]
+            ["Price column is right-aligned."]
+            ["Product Name is left-aligned."]
         ]
 
         footer: [
@@ -279,49 +270,45 @@ view/options layout [
 
     button "Text Styles" blue [
         header: [
-            ["~b~ACME Corp" "~i~Style Demo" "~u~Internal"]
-            ""
+            ['b "ACME Corp" /b 'i "Style Demo" /i 'u "Internal" /u]
         ]
 
         content: copy [
-            "~b~Bold Title"
-            ""
-            "~i~This line is italic."
-            "~u~This line is underlined."
-            "~bi~This line is bold italic."
-            "~bu~This line is bold and underlined."
-            "~iu~This line is italic and underlined."
-            "~biu~This line is bold, italic and underlined."
-            ""
-            "~h1~Heading Level 1"
-            "~h2~Heading Level 2"
-            "~h3~Heading Level 3"
-            ""
-            "Regular text with legacy *bold* and _underline_ inline markup."
-            ""
-            "~b~Styled table cells below:"
-            ""
+            ['b "Bold Title" /b]
+            [""]
+            ['i "This line is italic." /i]
+            ['u "This line is underlined." /u]
+            ['b 'i "This line is bold italic." /i /b]
+            ['b 'u "This line is bold and underlined." /u /b]
+            ['i 'u "This line is italic and underlined." /u /i]
+            ['b 'i 'u "This line is bold, italic and underlined." /u /i /b]
+            [""]
+            ['h1 "Heading Level 1" /h1]
+            ['h2 "Heading Level 2" /h2]
+            ['h3 "Heading Level 3" /h3]
+            [""]
+            ["Styled table cells below:"]
         ]
 
         append/only content reduce [
-            'table
-            ["Item" 160 "L" "~b~Status" 100 "C" "~b~Amount" 100 "R"]
-            ["~i~Widget A" "~bu~Active" "$250.00"]
-            ["~b~Gadget B" "~u~Pending" "$420.00"]
-            ["~bi~Service C" "~iu~Completed" "$125.00"]
+            'table 'box 'alt
+            ['< 160 "Item" '^ 100 "Status" '> 100 "Amount"]
+            ['i "Widget A" /i 'b 'u "Active" /u /b "$250.00"]
+            ['b "Gadget B" /b 'u "Pending" /u "$420.00"]
+            ['b 'i "Service C" /i /b 'i 'u "Completed" /u /i "$125.00"]
             ["Regular Item" "Active" "$100.00"]
         ]
 
         append content [
-            ""
-            "~h2~Summary"
-            ""
-            "Prefixes: b=bold i=italic u=underline h1/h2/h3=headings"
-            "Combine letters: bi bu iu biu (any order)"
+            [""]
+            ['h2 "Summary" /h2]
+            [""]
+            ["Tags: 'b '/b 'i '/i 'u '/u 'h1 '/h1 'h2 '/h2 'h3 '/h3"]
+            ["Line-level: 'm 'h1 'h2 'h3 (at start of block)"]
         ]
 
         footer: [
-            ["~i~ACME Corp" "%TIME%" "~b~Page %PAGE% of %PAGES%"]
+            ['i "ACME Corp" /i "%TIME%" 'b "Page %PAGE% of %PAGES%" /b]
         ]
 
         either preview/data [
@@ -333,40 +320,38 @@ view/options layout [
 
     button "Mono Font" blue [
         header: [
-            ["~m~ACME Corp" "~mi~Mono Demo" "~mu~Internal"]
-            ""
+            ['m "ACME Corp" 'b "Mono Demo" /b 'i "Internal" /i]
         ]
 
         content: copy [
-            "~m~Monospaced text is ideal for aligned columns."
-            "~mb~Bold mono for emphasis."
-            "~mi~Italic mono for variety."
-            "~mbui~Bold italic underline mono."
-            ""
-            "~m~Column alignments in mono:"
-            ""
+            ['m "Monospaced text is ideal for aligned columns."]
+            ['m 'b "Bold mono for emphasis." /b]
+            ['m 'i "Italic mono for variety." /i]
+            ['m 'b 'i 'u "Bold italic underline mono." /u /i /b]
+            [""]
+            ['m "Column alignments in mono:"]
         ]
 
         append/only content reduce [
-            'table
-            ["~m~Name" 150 "L" "~m~Value" 80 "R" "~m~Code" 100 "C"]
-            ["~m~Alpha" "123.45" "AB-001"]
-            ["~m~Beta" "67.89" "CD-002"]
-            ["~m~Gamma" "901.23" "EF-003"]
-            ["~mb~TOTAL" "1092.57" ""]
+            'table 'box 'alt
+            ['< 150 "Name" '> 80 "Value" '^ 100 "Code"]
+            ['m "Alpha" /m "123.45" "AB-001"]
+            ['m "Beta" /m "67.89" "CD-002"]
+            ['m "Gamma" /m "901.23" "EF-003"]
+            ['b "TOTAL" /b "1092.57" ""]
         ]
 
         append content [
-            ""
-            "~m~Regular mono"
-            "~mb~Bold mono"
-            "~mi~Italic mono"
-            ""
-            "~h2~Headings still use proportional font"
+            [""]
+            ['m "Regular mono"]
+            ['m 'b "Bold mono" /b]
+            ['m 'i "Italic mono" /i]
+            [""]
+            ['h2 "Headings still use proportional font" /h2]
         ]
 
         footer: [
-            ["~m~Mono Demo" "%TIME%" "~mb~Page %PAGE% of %PAGES%"]
+            ['m "Mono Demo" "%TIME%" 'b "Page %PAGE% of %PAGES%" /b]
         ]
 
         either preview/data [
@@ -376,5 +361,42 @@ view/options layout [
         ]
     ]
 
+    button "Number Formatting" blue [
+        header: [
+            "Number & Money Formatting"
+        ]
+
+        content: copy []
+
+        append content [
+            ["Tables support automatic number formatting."]
+            ["Use 'money for currency and 5.4 for decimal places."]
+        ]
+
+        append/only content reduce [
+            'table 'box 'alt
+            ['< 150 "Item" '> 80 "Qty" '> 100 5.4 "Weight" '> 100 'money "Price" '> 100 'money "Total"]
+            ["Widget" 100 3.14159 25.00 2500]
+            ["Gadget" 50 0.001 42.50 2125.0]
+            ["Parts" 200 1234.5678 0.75 150.0]
+            ['b "TOTALS" /b 350 "" "" 4775.00]
+        ]
+
+        append content [
+            ["Numbers in table cells are formatted automatically."]
+            ["Negative values get a minus prefix."]
+        ]
+
+        footer: [
+            ['b "Page %PAGE% of %PAGES%" /b]
+        ]
+
+        either preview/data [
+            generate-report/browser header content footer %reports/format-report.pdf
+        ][
+            generate-report header content footer %reports/format-report.pdf
+        ]
+    ]
+
     button "Exit" red [unview]
-][size: 700x430]
+][size: 700x470]

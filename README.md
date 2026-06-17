@@ -1,6 +1,6 @@
 # report-generator.red
 
-A Red module that generates multi-page A4 PDF reports with mixed text and table content.
+A Red module that generates multi-page A4 PDF reports with mixed text and tables.
 
 ![image](reports/full-example.png)
 
@@ -35,129 +35,165 @@ generate-report/browser header content footer %report.pdf   ; generate and open 
 
 | Argument | Type | Description |
 |----------|------|-------------|
-| `header` | `block!` or `none!` | Lines printed at the top of every page (bold). Each line can be a string or a block of 1–3 strings for multi-column layout. Supports `%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%` tokens. |
-| `content` | `block!` | Mixed text lines and table definitions |
-| `footer` | `block!` or `none!` | Lines printed at the bottom of every page. Same format as header. Same token support. |
+| `header` | `block!` or `none!` | Lines shown at the top of every page. Supports lit-word style tags and `%DATE%`/`%TIME%`/`%DATETIME%`/`%PAGE%`/`%PAGES%` tokens. |
+| `content` | `block!` | Mixed content: blocks for text lines, `'table` blocks for tables |
+| `footer` | `block!` or `none!` | Lines shown at the bottom of every page. Same format and token support as header. |
 | `output` | `file!` | Output PDF file path |
 
-### Content block
+## Content block
 
-The `content` block is a flat list of items:
+The `content` block is a list of items:
 
-- **String** — a text line. Supports `~X~` style prefixes (see below) and legacy `*bold*` / `_underline_` inline markup.
-- **`^L` string** — forces a page break at that point.
-- **Table block** — a nested block starting with the word `'table`, followed by column definitions and row data.
+- **Block** — a content line. Each line is a block of values with optional style tags.
+- **`"^L"` string** — forces a page break (legacy; also works as `["^L"]` block).
+- **Table block** — a nested block starting with `'table`, followed by optional modifiers, column definitions, and row data.
 
 ```red
 content: copy []
-append content "Some text"
-append content "*Bold heading*"
-append content ""
+append content ['b "Bold heading" /b]
+append content ["Regular text"]
+append content [""]
 append/only content reduce [
-    'table
-    ["Name" 200 "L" "Amount" 100 "R"]   ; columns: [Title Width Align ...]
-    ["Widget" "$25.00"]                   ; rows: [col1 col2 ...]
+    'table 'box 'alt
+    ['< 200 "Name" '> 100 "Amount"]
+    ["Widget" "$25.00"]
     ["Gadget" "$42.00"]
 ]
-append content "Text after table"
+append content ["Text after table"]
 ```
 
-### Column definitions
+## Style tags
 
-Each column is defined by 2 or 3 elements:
+Styles are applied using lit-word tags (`'b`) to turn on and refinement tags (`/b`) to turn off. Styles stack and auto-close at the end of each line block.
 
-```
-["Title" Width "Align" ...]
-```
+| Tag | End tag | Style |
+|-----|---------|-------|
+| `'b` | `/b` | **Bold** |
+| `'i` | `/i` | *Italic* |
+| `'u` | `/u` | Underline |
+| `'m` | `/m` | Monospace (Courier) |
+| `'h1` | `/h1` | Heading 1 (24pt bold) |
+| `'h2` | `/h2` | Heading 2 (18pt bold) |
+| `'h3` | `/h3` | Heading 3 (14pt bold) |
 
-- **Width** — integer, in PostScript points (72 pts = 1 inch)
-- **Align** — `"L"` (left, default), `"C"` (center), or `"R"` (right). If omitted, all columns default to left.
+Line-level modifiers (`'m`, `'h1`, `'h2`, `'h3`) can only appear at the start of a content line block and apply to the entire line.
 
-With alignment (3 elements per column):
-```red
-["Product" 180 "L" "Qty" 60 "C" "Total" 80 "R"]
-```
+End tags are optional — unclosed styles auto-close at the end of each line.
 
-Without alignment (2 elements per column, all left-aligned):
-```red
-["Product" 180 "Qty" 60 "Total" 80]
-```
-
-### Text styles
-
-Prefix any string with `~X~` to apply styling. Works everywhere: content lines, table cells, headers, and footers.
-
-| Prefix | Style |
-|--------|-------|
-| `~b~` | **Bold** |
-| `~i~` | *Italic* |
-| `~u~` | Underline |
-| `~m~` | Monospace (Courier) |
-| `~bi~` or `~ib~` | Bold + italic |
-| `~bu~` or `~ub~` | Bold + underline |
-| `~iu~` or `~ui~` | Italic + underline |
-| `~biu~` (any order) | Bold + italic + underline |
-| `~mb~` | Monospace + bold |
-| `~mi~` | Monospace + italic |
-| `~mbu~` | Monospace + bold + underline |
-| `~h1~` | Heading 1 (24pt bold) |
-| `~h2~` | Heading 2 (18pt bold) |
-| `~h3~` | Heading 3 (14pt bold) |
-
-Examples:
+### Examples
 
 ```red
-append content "~b~Bold title"
-append content "~i~Italic paragraph"
-append content "~bu~Bold and underlined"
-append content "~h2~Section heading"
-append content "~m~Monospaced text"
-append content "~mb~Bold mono"
+['b "Bold text" /b " normal text"]
+['b 'i "Bold italic" /i /b]
+['m "Monospace line"]
+['h1 "Big heading" /h1 " continues normal"]
+['b "Starts bold " /b 'i "then italic" /i]
 ```
 
-In table cells:
+Works in headers, footers, content lines, and table cells.
 
-```red
-["~i~Widget A" "~bu~Active" "$250.00"]
-["~m~Code" "~mb~123.45" "~mi~Done"]
-```
+### Header and footer style tags
 
-In header/footer lines:
+Header and footer lines support the same style tags. Each line is a block with up to 3 text segments, positioned left, center, and right:
 
 ```red
 header: [
-    ["~b~ACME Corp" "~i~Quarterly Report" "~u~Confidential"]
+    ['h1 "ACME Corp" /h1 'b "Report" /b "Confidential"]
+    ['b "%DATETIME%" /b]
 ]
 footer: [
-    ["~i~Company Inc" "" "~b~Page %PAGE% of %PAGES%"]
+    ['b "ACME Corp" /b "%TIME%" "Page %PAGE% of %PAGES%"]
 ]
 ```
 
-Styles can also be combined with multi-column block lines and with footer tokens (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`) in footers.
+Segments without explicit styles in headers default to bold. Segments in footers default to regular.
 
-**Legacy inline markup** (content lines only, for backward compatibility):
-- `*text*` — renders as bold (asterisks are stripped)
-- `_text_` — renders with underline (underscores are stripped)
+## Column definitions
 
-### Page breaks
+Table columns are defined by a block of values after `'table` (and optional modifiers):
 
-Insert `"^L"` as a string in content to force a page break:
-
-```red
-append content "Last line before break"
-append content "^L"
-append content "First line on new page"
+```
+['< 'b 180 "Product" '^ 60 5.4 "Qty" '> 80 'money "Total"]
 ```
 
-Inside table data, use a row where the first column is `"^L"`:
+| Modifier | Meaning |
+|----------|---------|
+| `'<` | Left-align next column |
+| `'^` | Center next column |
+| `'>` | Right-align next column |
+| `'b` | Bold data cells in next column (header is always bold) |
+| `'money` | Format numbers as money with thousands separator |
+| `5.4` | Format numbers with 4 decimal places |
+| `180` | Set column width in points |
+
+Modifiers before each column title string apply to that column. Each column is: optional modifiers + width + title string.
+
+## Table modifiers
+
+| Modifier | Meaning |
+|----------|---------|
+| `'box` | Draw outer border around table |
+| `'alt` | Alternate row background (light gray on even rows) |
+
+Both can be combined: `'table 'box 'alt`. Without modifiers, the table has no outer border and no alternating rows. Column separators are always drawn.
+
+Header rows always have a gray background regardless of modifiers.
+
+### Table examples
+
+```red
+; Boxed table with alternating rows and number formatting
+[
+    'table 'box 'alt
+    ['< 180 "Product" '^ 60 5.4 "Qty" '> 80 'money "Total"]
+    ["Widget A" 120 3000]
+    ["Widget B" "45" 1890.0]
+    ['b "TOTALS" /b "" 13780.00]
+]
+
+; Plain table (no box, no alternation)
+[
+    'table
+    ['< 200 "Name" '> 100 "Amount"]
+    ["Item A" "$100.00"]
+]
+
+; Boxed table with column-level bold data
+[
+    'table 'box
+    ['< 'b 150 "Item" '> 80 "Qty" '> 100 "Price"]
+    ["Widget" 10 25.00]
+]
+```
+
+### Page breaks in tables
+
+Use a row where the first column is `"^L"` to break a table across pages. The table header is automatically repeated on the next page:
 
 ```red
 ["^L" "" ""]
 ```
 
-This triggers a page break and automatically repeats the table header on the next page. Useful for tables that are too large for a single page.
+## Number and money formatting
 
-### Header and footer tokens
+Numbers in table cells are automatically formatted based on the column definition:
+
+- **`'money`** — formats as `$1'234.50` with thousands separator and 2 decimal places
+- **`5.4`** — formats with 4 decimal places (the digit after the dot)
+- **No format** — numbers are displayed as-is via `form`
+- **Strings** — always displayed as-is (no formatting)
+
+Numbers can be Red integers, floats, or money values. Words that evaluate to numbers are also supported (e.g., `threethousand` where `threethousand: 3000`).
+
+```red
+['table 'box 'alt
+    ['< 150 "Item" '> 80 "Qty" '> 100 5.4 "Weight" '> 100 'money "Price"]
+    ["Widget" 100 3.14159 25.00]
+    ["Gadget" 50 0.001 42.50]
+]
+```
+
+## Header and footer tokens
 
 Tokens can be used in both header and footer lines. Date and time are captured once when `generate-report` is called, so they are consistent across all pages.
 
@@ -170,37 +206,8 @@ Tokens can be used in both header and footer lines. Date and time are captured o
 | `%DATETIME%` | Date and time combined | `2026-06-13 19:04` |
 
 ```red
-footer: ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
-header: [["ACME Corp" "" "%DATE%"]]
-```
-
-### Multi-column headers and footers
-
-Header and footer lines can be blocks of 1–3 strings instead of plain strings. Each string in the block is positioned across the page width:
-
-| Position | Index | Alignment |
-|----------|-------|-----------|
-| Left     | 1     | Left-aligned at left margin |
-| Center   | 2     | Centered across page width |
-| Right    | 3     | Right-aligned at right margin |
-
-You can use 1, 2, or 3 elements. Missing positions are simply skipped.
-
-```red
-header: [
-    ["ACME Corp" "Quarterly Report" "Confidential"]
-    ["Dept: Sales" "" "%DATETIME%"]
-    ""
-]
-```
-
-The first line renders the company name on the left, title centered, and classification on the right. The second line has left and right text with an empty center. The third line is a plain string (full-width left-aligned, as before).
-
-All footer tokens work inside block-based footer lines:
-
-```red
 footer: [
-    ["ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
+    ['b "Page %PAGE% of %PAGES%" /b "" "%DATETIME%"]
 ]
 ```
 
@@ -208,11 +215,10 @@ footer: [
 
 - A4 (595 x 842 pts)
 - 50pt margins on all sides
-- Font: Times-Roman 12pt, line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`~m~` prefix).
+- Font: Times-Roman 12pt, line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`'m` tag).
 - Table rows: 19pt (line-height + 4)
-- Headers rendered in bold
-- Table headers have a light gray background
-- Alternating table rows have a very light gray background
+- Table headers: always bold with gray background
+- Column separators: thin 0.5pt lines
 
 ## Full example
 
@@ -223,40 +229,36 @@ Red []
 
 do %report-generator.red
 
-widgetC: reduce ["Widget C" "245" (to-money 8890.00)]
+widgetC: ["Widget C" "245" 8890.00]
 threethousand: 3000
+total: 1890.0
 
 ;---------------------------------------------------------
 generate-report 
     [ ;HEADER
-        ["ACME Corp" "~h1~Quarterly Report" "~iu~Confidential"]
-        ["" "%DATETIME%"]
+        ['h1 "ACME Corp" /h1 'b "Quarterly Report" /b "Confidential"]
+        [" " " " 'b "%DATETIME%"]
     ] ;header
 
     [ ;CONTENT
-    ""
-    "*Sales Summary*"
-    ""
-    "Q1 sales data for all product lines."
-    ""
-    [
-        'table
-        ["Product" 180 "L" "Qty" 60 "C" "Total" 80 "R"]
-        ["Widget A" "120" (to-money threethousand)]
-        ["Widget B" "45" "$1'890.00"]
-        widgetC
-        ["~b~TOTALS" "" "$13'780.00"]
-    ]
-    ""
-    "End of report."
+        ['b "Sales Summary for " /b 'u "Q1 2015" /u]
+        ["Q1 sales data for all product lines."]
+        [
+            'table 'box 'alt
+            ['< 180 "Product" '^ 60 5.4 "Qty" '> 80 'money "Total"]
+            ["Widget A" 120 'b threethousand]
+            ["Widget B" "45" total]
+            widgetC
+            ['b "TOTALS" /b "" "$13'780.00"]
+        ]
+        ["End of report."]
     ] ;content
 
     [ ;FOOTER
-        ["ACME Corp" "%TIME%" "Page %PAGE% of %PAGES%"]
+        ['b "ACME Corp" /b "%TIME%" "Page %PAGE% of %PAGES%"]
     ] ;footer
 
     %reports/full-example.pdf
-
 ```
 
 The output PDF is written to the `reports/` directory (which is gitignored).
@@ -266,8 +268,8 @@ The output PDF is written to the `reports/` directory (which is gitignored).
 | File | Purpose |
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
-| `full-example.red` | Minimal full example — run with `red full-example.red` |
-| `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, style, and mono demos. Includes a Preview checkbox to open the PDF in the default viewer. |
+| `full-example.red` | Full example — run with `red full-example.red` |
+| `report-generator-test.red` | GUI test harness with buttons for text, table, unified, page-break, multi-column, center-align, style, mono, and number formatting demos. Includes a Preview checkbox to open the PDF in the default viewer. |
 | `reports/` | Output directory for generated PDFs (gitignored) |
 | `*.pdf` | Generated PDF (filename specified by the `output` parameter) |
 
@@ -281,25 +283,28 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 |----------|---------|
 | `ps-escape` | Escapes `\`, `(`, `)` in PostScript strings |
 | `emit-font` | Emits a PostScript font selection command |
-| `emit-text` | Emits a left-aligned text drawing command |
-| `emit-text-center` | Emits a center-aligned text command (uses `stringwidth`) |
-| `emit-text-right` | Emits a right-aligned text command (uses `stringwidth`) |
-| `parse-style` | Parses `~X~` style prefix, returns `[bold? italic? underline? heading text]` |
-| `select-style-font` | Emits PostScript font selection based on style flags |
-| `emit-underline` | Draws an underline beneath text at the current font |
-| `emit-styled` | Parses style prefix, selects font, emits aligned text, handles underline, resets font |
+| `emit-text` | Emits a left/center/right-aligned text drawing command |
+| `emit-text-join` | Emits left-aligned text using PS `currentpoint` chaining for inline segments |
+| `emit-text-start` | Initializes PS variables for a joined line |
+| `emit-underline` | Draws an underline beneath text |
+| `emit-styled-text` | Selects font, emits aligned text with styles, handles underline |
 | `emit-rect` | Emits a stroked rectangle |
-| `emit-filled-rect` | Emits a filled rectangle with gray fill (wrapped in `gsave`/`grestore`) |
-| `emit-header` | Emits all header lines in bold (supports multi-column block lines) |
-| `emit-footer` | Emits all footer lines with token replacement (receives pre-computed date/time; supports multi-column block lines) |
-| `emit-data-line` | Emits a text line with `~X~` style prefixes and legacy `*bold*`/`_underline_` markup |
-| `emit-table-header` | Emits a table header row with gray background and column separators |
-| `emit-table-row` | Emits a table data row with alternating row shading |
-| `parse-table-columns` | Parses column definitions into titles, widths, and alignments |
+| `emit-filled-rect` | Emits a filled rectangle with gray fill |
+| `emit-vline` | Emits a thin vertical line (column separator) |
+| `emit-header-v2` | Emits header lines with L/C/R positioning and style support |
+| `emit-footer-v2` | Emits footer lines with token replacement and style support |
+| `emit-content-line` | Processes a content line block, extracting line-level modifiers |
+| `emit-table-header-v2` | Emits a table header row with gray background |
+| `emit-table-row-v2` | Emits a table data row with style and format support |
+| `process-line-values` | Parses style tags from a block into `[styles text ...]` pairs |
+| `parse-columns-v2` | Parses column definitions into titles, widths, alignments, formats |
+| `format-number-value` | Formats numbers as money or with specified decimal places |
+| `format-decimal` | Formats numbers with thousands separators and decimal places |
+| `end-tag-target` | Maps refinement end-tags to their corresponding style words |
 
 **Rendering pipeline:**
 
 1. Content is processed page by page, tracking `page-y` position
 2. Each page's PostScript is collected into a `pages` block
-3. During final assembly, tokens (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`) are replaced in each page's PostScript (covers headers), then footers are emitted
+3. During final assembly, tokens (`%PAGE%`, `%PAGES%`, `%DATE%`, `%TIME%`, `%DATETIME%`) are replaced in each page's PostScript, then footers are emitted
 4. The final PS file is assembled with DSC comments, converted to PDF, and optionally opened in the default viewer
