@@ -11,72 +11,72 @@ content: copy []
 
 ;--- Section 1: Text with styles ---
 append content [
-    ['h1 "Report Generator Demo" /h1]
+    ["Report Generator Demo" ['h1]]
     [""]
-    ['b "This report demonstrates all features of the report-generator module." /b]
+    ["This report demonstrates all features of the report-generator module." ['b]]
     [""]
-    ['i "Italic text" /i]
-    ['u "Underlined text" /u]
-    ['b "Bold text" /b]
-    ['b 'i "Bold italic" /i /b]
-    ['b 'u "Bold underline" /u /b]
-    ['i 'u "Italic underline" /u /i]
-    ['b 'i 'u "Bold italic underline" /u /i /b]
+    ["Italic text" ['i]]
+    ["Underlined text" ['u]]
+    ["Bold text" ['b]]
+    ["Bold italic" ['b 'i]]
+    ["Bold underline" ['b 'u]]
+    ["Italic underline" ['i 'u]]
+    ["Bold italic underline" ['b 'i 'u]]
     [""]
-    ['h2 "Monospace" /h2]
-    ['m "Monospaced text is ideal for aligned columns."]
-    ['m 'b "Bold mono" /b]
-    ['m 'i "Italic mono" /i]
+    ["Monospace" ['h2]]
+    ["Monospaced text is ideal for aligned columns." ['m]]
+    ["Bold mono" ['m 'b]]
+    ["Italic mono" ['m 'i]]
     [""]
-    ['h2 "Headings" /h2]
-    ['h1 "Heading Level 1" /h1]
-    ['h2 "Heading Level 2" /h2]
-    ['h3 "Heading Level 3" /h3]
+    ["Headings" ['h2]]
+    ["Heading Level 1" ['h1]]
+    ["Heading Level 2" ['h2]]
+    ["Heading Level 3" ['h3]]
 ]
 
 ;--- Section 2: Boxed table with alternating rows ---
 append content [
     [""]
-    ['h2 "Boxed Table with Alternating Rows" /h2]
+    ["Boxed Table with Alternating Rows" ['h2]]
     ["A table with 'box and 'alt modifiers, number formatting, and styled cells."]
 ]
 
 append/only content reduce [
     'table 'box 'alt
-    ['< 180 "Product" '^ 60 5.4 "Qty" '> 80 'money "Price" '> 80 'money "Total"]
+    ["Product" ['< 180] "Qty" ['^ 60 5.4] "Price" ['> 80 'money] "Total" ['> 80 'money]]
     ["Widget A" 120 25.00 3000.00]
     ["Widget B" 45 42.00 1890.00]
     ["Gadget X" 200 12.50 2500.00]
     ["Gizmo Z" 33 99.00 3267.00]
-    ['b "TOTALS" /b 398 "" 10657.00]
+    ["TOTALS" ['b] 398 "" 10657.00]
 ]
 
 ;--- Section 3: Plain table (no box, no alternation) ---
 append content [
     [""]
-    ['h2 "Plain Table" /h2]
+    ["Plain Table" ['h2]]
     ["A table without 'box or 'alt — just column separators."]
 ]
 
 append/only content reduce [
     'table
-    ['< 200 "Category" '> 100 "Amount"]
+    ["Category" ['< 200] "Amount" ['> 100]]
     ["Rent" 4500.00]
     ["Utilities" 1200.00]
     ["Supplies" 800.00]
-    ['b "TOTAL" /b 6500.00]
+    ["TOTAL" ['b] 6500.00]
 ]
 
 ;--- Section 4: Center-aligned columns ---
 append content [
     [""]
-    ['h2 "Center-aligned Columns" /h2]
+    ["Center-aligned Columns" ['h2]]
     ["Demonstrates ^ (center) alignment in column definitions."]
 ]
 
 append/only content reduce [
     'table 'alt
-    ['^ 80 "SKU" '< 200 "Product Name" '^ 120 "Category" '> 80 "Price"]
+    ["SKU" ['^ 80] "Product Name" ['< 200] "Category" ['^ 120] "Price" ['> 80]]
     ["W-001" "Widget Alpha" "Hardware" 25.00]
     ["W-002" "Widget Beta" "Hardware" 42.00]
     ["G-001" "Gadget Pro" "Electronics" 99.00]
@@ -88,59 +88,59 @@ append/only content reduce [
 ;--- Section 5: Styled table cells ---
 append content [
     [""]
-    ['h2 "Styled Table Cells" /h2]
+    ["Styled Table Cells" ['h2]]
     ["Style tags work inside table cells."]
 ]
 
 append/only content reduce [
     'table 'box 'alt
-    ['< 160 "Item" '^ 100 "Status" '> 100 "Amount"]
-    ['i "Widget A" /i 'b 'u "Active" /u /b 250.00]
-    ['b "Gadget B" /b 'u "Pending" /u 420.00]
-    ['b 'i "Service C" /i /b 'i 'u "Completed" /u /i 125.00]
+    ["Item" ['< 160] "Status" ['^ 100] "Amount" ['> 100]]
+    ["Widget A" ['i] "Active" ['b 'u] 250.00]
+    ["Gadget B" ['b] "Pending" ['u] 420.00]
+    ["Service C" ['b 'i] "Completed" ['i 'u] 125.00]
     ["Regular Item" "Active" 100.00]
 ]
 
 ;--- Section 6: Mono table ---
 append content [
     [""]
-    ['h2 "Monospace Table" /h2]
-    ['m "Using 'm for aligned mono columns."]
+    ["Monospace Table" ['h2]]
+    ["Using 'm for aligned mono columns." ['m]]
 ]
 
 append/only content reduce [
     'table 'box 'alt
-    ['< 150 "Name" '> 80 "Value" '^ 100 "Code"]
-    ['m "Alpha" /m 123.45 "AB-001"]
-    ['m "Beta" /m 67.89 "CD-002"]
-    ['m "Gamma" /m 901.23 "EF-003"]
-    ['b "TOTAL" /b 1092.57 ""]
+    ["Name" ['< 150] "Value" ['> 80] "Code" ['^ 100]]
+    ["Alpha" ['m] 123.45 "AB-001"]
+    ["Beta" ['m] 67.89 "CD-002"]
+    ["Gamma" ['m] 901.23 "EF-003"]
+    ["TOTAL" ['b] 1092.57 ""]
 ]
 
 ;--- Section 7: Dynamic content ---
 append content [
     [""]
-    ['h2 "Dynamic Content" /h2]
+    ["Dynamic Content" ['h2]]
     ["Generating lines with a loop:"]
 ]
 
 repeat x 10 [
     i: i + 1
     append/only content reduce [
-        'b rejoin ["Record #" i ": "] /b rejoin ["Product widget #" i " - Qty: " (i * 3)]
+        rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]
     ]
 ]
 
 ;--- Section 8: Page break in table ---
 append content [
     [""]
-    ['h2 "Table with Page Break" /h2]
+    ["Table with Page Break" ['h2]]
     ["A long table that breaks across pages using a ^L row."]
 ]
 
 append/only content reduce [
     'table 'alt
-    ['> 60 "ID" '< 200 "Name" '> 100 "Amount"]
+    ["ID" ['> 60] "Name" ['< 200] "Amount" ['> 100]]
     ["1" "Item A" 100.00] ["2" "Item B" 200.00] ["3" "Item C" 300.00]
     ["4" "Item D" 400.00] ["5" "Item E" 500.00] ["6" "Item F" 600.00]
     ["7" "Item G" 700.00] ["8" "Item H" 800.00] ["9" "Item I" 900.00]
@@ -152,20 +152,47 @@ append/only content reduce [
 
 append content [
     [""]
-    ['b "End of report." /b]
+    ["End of report." ['b]]
+]
+
+;--- Section 9: Mixed font sizes on one line ---
+append content [
+    [""]
+    ["Mixed Font Sizes" ['h2]]
+    ["Heading styles can be applied per-segment, mixed with regular text on the same line."]
+    ["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
+    [""]
+    ["The line height adapts to the tallest segment."]
+    ["Regular " [] "mono " ['m] "and " [] "bold italic" ['b 'i] " together."]
+]
+
+;--- Section 10: Table with heading in a cell ---
+append content [
+    [""]
+    ["Headings in Table Cells" ['h2]]
+    ["Table rows expand to fit heading-sized text."]
+]
+
+append/only content reduce [
+    'table 'box 'alt
+    ["Category" ['< 160] "Description" ['< 200] "Amount" ['> 100]]
+    ["Revenue" ['h3] "Total quarterly income" 50000.00]
+    ["Expenses" ['b] "Operating costs" 35000.00]
+    ["Profit" ['h2] "Net result" ['b 'u] 15000.00]
+    ["Regular" "No special styling" 0.00]
 ]
 
 ;--- Generate ---
 generate-report
     [ ;HEADER
-        ['h1 "ACME Corp" /h1 'b "Full Example Report" /b "Confidential"]
-        [" " " " 'b "%DATETIME%"]
+        ["ACME Corp" ['h1] "Full Example Report" ['b] "Confidential"]
+        [" " " " "%DATETIME%" ['b]]
     ] ;header
 
     content
 
     [ ;FOOTER
-        ['b "ACME Corp" /b "%TIME%" "Page %PAGE% of %PAGES%"]
+        ["ACME Corp" ['b] "%TIME%" "Page %PAGE% of %PAGES%"]
     ] ;footer
 
     %reports/example-full.pdf

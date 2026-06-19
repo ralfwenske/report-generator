@@ -1,8 +1,26 @@
 Red [
-    Title: "Report Generator - Test"
+    Title: "Report Generator - Test (v3 DSL)"
 ]
 
 do %report-generator.red
+
+header:  []
+content: []
+footer:  none
+
+emit-report: func [
+    file-name [file!]
+    /local pdf
+][
+    pdf: rejoin [%reports/ file-name]
+    either preview/data [
+        generate-report/browser header content footer pdf
+        wait 1
+        delete pdf
+    ][
+        generate-report header content footer pdf
+    ]
+]
 
 view/options layout [
     below
@@ -12,44 +30,34 @@ view/options layout [
     button "Text Report" blue [
         header: [
             ["ACME Corp" "Monthly Sales Report"]
-            [" " " " 'b "%DATETIME%"]
+            [" " " " "%DATETIME%" ['b]]
         ]
-
         content: copy []
+        footer: [["Confidential" ['b] "%DATE%" "Page %PAGE% of %PAGES%"]]
+
         i: 0
         while [i < 60][
             i: i + 1
-            append/only content reduce [['b rejoin ["Record #" i ": "] /b rejoin ["Product widget #" i " - Qty: " (i * 3)]]]
+            append/only content reduce [rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]]
         ]
 
-        footer: [['b "Confidential" /b "%DATE%" "Page %PAGE% of %PAGES%"]]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/text-report.pdf
-        ][
-            generate-report header content footer %reports/text-report.pdf
-        ]
+        emit-report %text-report.pdf
     ]
 
     button "Table Report" blue [
         header: ["Product Inventory"]
-
         content: copy []
+        footer: [["Page %PAGE% of %PAGES%" "" "%TIME%"]]
+
         append/only content reduce [
             'table
-            ['< 180 "Product" '> 60 "Qty" '> 80 "Price" '> 80 "Total"]
+            ["Product" ['< 180] "Qty" ['> 60] "Price" ['> 80] "Total" ['> 80]]
             ["Widget A" "10" "$25.00" "$250.00"]
             ["Widget B" "5" "$42.00" "$210.00"]
             ["Gadget X" "23" "$12.50" "$287.50"]
         ]
 
-        footer: [["Page %PAGE% of %PAGES%" "" "%TIME%"]]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/table-report.pdf
-        ][
-            generate-report header content footer %reports/table-report.pdf
-        ]
+        emit-report %table-report.pdf
     ]
 
     button "Unified Report" blue [
@@ -57,12 +65,14 @@ view/options layout [
             "ACME Corporation"
             "Quarterly Report"
         ]
-
-        i: 0
         content: copy []
+        footer: [
+            ["" "ACME Corp - Confidential" ""]
+            ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
+        ]
 
         append content [
-            ['b "Sales Summary" /b]
+            ["Sales Summary" ['b]]
             [""]
             ["Below is the Q1 sales data for all product lines."]
             ["Revenue targets were met across all categories."]
@@ -70,14 +80,15 @@ view/options layout [
 
         append/only content reduce [
             'table 'box 'alt
-            ['< 180 "Product" '> 60 "Qty" '> 80 "Price" '> 80 "Total"]
+            ["Product" ['< 180] "Qty" ['> 60] "Price" ['> 80] "Total" ['> 80]]
             ["Widget A" "120" "$25.00" "$3000.00"]
             ["Widget B" "45" "$42.00" "$1890.00"]
             ["Gadget X" "200" "$12.50" "$2500.00"]
             ["Gizmo Z" "33" "$99.00" "$3267.00"]
-            ['b "TOTALS" /b "" "" "$10657.00"]
+            ["TOTALS" ['b] "" "" "$10657.00"]
         ]
 
+        i: 0
         repeat x 10 [
             i: i + 1
             append/only content reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
@@ -85,7 +96,7 @@ view/options layout [
 
         append/only content reduce [
             'table
-            ['< 180 "Product" '> 60 "Qty" '> 80 "Price" '> 80 "Total"]
+            ["Product" ['< 180] "Qty" ['> 60] "Price" ['> 80] "Total" ['> 80]]
             ["Widget A" "120" "$25.00" "$3000.00"]
             ["Widget B" "45" "$42.00" "$1890.00"]
         ]
@@ -97,18 +108,18 @@ view/options layout [
 
         append content ["^L"]
         append content [
-            ['b "Expenses" /b]
+            ["Expenses" ['b]]
             [""]
             ["Operating expenses for the quarter."]
         ]
 
         append/only content reduce [
             'table
-            ['< 200 "Category" '> 100 "Amount"]
+            ["Category" ['< 200] "Amount" ['> 100]]
             ["Rent" "$4500.00"]
             ["Utilities" "$1200.00"]
             ["Supplies" "$800.00"]
-            ['b "TOTAL" /b "$6500.00"]
+            ["TOTAL" ['b] "$6500.00"]
         ]
 
         repeat x 40 [
@@ -118,34 +129,26 @@ view/options layout [
 
         append content [
             [""]
-            ['b "Net Profit: $4157.00" /b]
+            ["Net Profit: $4157.00" ['b]]
             [""]
-            ['u "End of quarterly report" /u]
+            ["End of quarterly report" ['u]]
         ]
 
-        footer: [
-            ["" "ACME Corp - Confidential" ""]
-            ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
-        ]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/unified-report.pdf
-        ][
-            generate-report header content footer %reports/unified-report.pdf
-        ]
+        emit-report %unified-report.pdf
     ]
 
     button "Page breaks" blue [
         header: ["Inventory Report"]
-
         content: copy []
+        footer: [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
+
         append content [
             ["Full inventory listing:"]
         ]
 
         append/only content reduce [
             'table 'alt
-            ['> 60 "ID" '< 200 "Name" '> 100 "Amount"]
+            ["ID" ['> 60] "Name" ['< 200] "Amount" ['> 100]]
             ["1" "Item A" "$100.00"]
             ["2" "Item B" "$200.00"]
             ["3" "Item C" "$300.00"]
@@ -179,13 +182,7 @@ view/options layout [
             ["End of inventory."]
         ]
 
-        footer: [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/pagebreak-report.pdf
-        ][
-            generate-report header content footer %reports/pagebreak-report.pdf
-        ]
+        emit-report %pagebreak-report.pdf
     ]
 
     button "Multi-column Header/Footer" blue [
@@ -193,53 +190,52 @@ view/options layout [
             ["ACME Corp" "Quarterly Report" "Confidential"]
             ["Dept: Sales" "" "%DATETIME%"]
         ]
-
         content: copy []
+        footer: [
+            ["ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
+        ]
+
         append content [
             ["This report demonstrates multi-column header and footer lines."]
             ["The header has left, center, and right text on each line."]
             [""]
-            ['b "Sales by Region" /b]
+            ["Sales by Region" ['b]]
         ]
 
         append/only content reduce [
             'table 'box 'alt
-            ['< 160 "Region" '> 80 "Q1" '> 80 "Q2" '> 80 "Total"]
+            ["Region" ['< 160] "Q1" ['> 80] "Q2" ['> 80] "Total" ['> 80]]
             ["North" "$12000" "$14500" "$26500"]
             ["South" "$8500" "$9200" "$17700"]
             ["East" "$15000" "$16800" "$31800"]
             ["West" "$11000" "$12400" 23400]
-            ['b "TOTAL" /b "$46500" "$52900" "$99400"]
+            ["TOTAL" ['b] "$46500" "$52900" "$99400"]
         ]
 
         repeat x 40 [
             append/only content reduce [rejoin ["Detail line #" x ": Additional supporting data for the quarterly analysis."]]
         ]
 
-        footer: [
-            ["ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
-        ]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/multicolumn-report.pdf
-        ][
-            generate-report header content footer %reports/multicolumn-report.pdf
-        ]
+        emit-report %multicolumn-report.pdf
     ]
 
     button "Center-aligned Columns" blue [
         header: [
             ["Product Catalog" "Item Listing" "Rev 3"]
         ]
-
         content: copy []
+        footer: [
+            ["" "Center-aligned demo" ""]
+            ["Company Inc" "%DATE%" "Page %PAGE% of %PAGES%"]
+        ]
+
         append content [
-            ["Table below demonstrates center-aligned columns using ^"."]
+            ["Table below demonstrates center-aligned columns using style blocks."]
         ]
 
         append/only content reduce [
             'table 'alt
-            ['^ 80 "SKU" '< 200 "Product Name" '^ 120 "Category" '> 80 "Price"]
+            ["SKU" ['^ 80] "Product Name" ['< 200] "Category" ['^ 120] "Price" ['> 80]]
             ["W-001" "Widget Alpha" "Hardware" "$25.00"]
             ["W-002" "Widget Beta" "Hardware" "$42.00"]
             ["G-001" "Gadget Pro" "Electronics" "$99.00"]
@@ -256,117 +252,98 @@ view/options layout [
             ["Product Name is left-aligned."]
         ]
 
-        footer: [
-            ["" "Center-aligned demo" ""]
-            ["Company Inc" "%DATE%" "Page %PAGE% of %PAGES%"]
-        ]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/center-align-report.pdf
-        ][
-            generate-report header content footer %reports/center-align-report.pdf
-        ]
+        emit-report %center-align-report.pdf
     ]
 
     button "Text Styles" blue [
         header: [
-            ['b "ACME Corp" /b 'i "Style Demo" /i 'u "Internal" /u]
+            ["ACME Corp" ['b] "Style Demo" ['i] "Internal" ['u]]
         ]
-
         content: copy [
-            ['b "Bold Title" /b]
+            ["Bold Title" ['b]]
             [""]
-            ['i "This line is italic." /i]
-            ['u "This line is underlined." /u]
-            ['b 'i "This line is bold italic." /i /b]
-            ['b 'u "This line is bold and underlined." /u /b]
-            ['i 'u "This line is italic and underlined." /u /i]
-            ['b 'i 'u "This line is bold, italic and underlined." /u /i /b]
+            ["This line is italic." ['i]]
+            ["This line is underlined." ['u]]
+            ["This line is bold italic." ['b 'i]]
+            ["This line is bold and underlined." ['b 'u]]
+            ["This line is italic and underlined." ['i 'u]]
+            ["This line is bold, italic and underlined." ['b 'i 'u]]
             [""]
-            ['h1 "Heading Level 1" /h1]
-            ['h2 "Heading Level 2" /h2]
-            ['h3 "Heading Level 3" /h3]
+            ["Heading Level 1" ['h1]]
+            ["Heading Level 2" ['h2]]
+            ["Heading Level 3" ['h3]]
             [""]
             ["Styled table cells below:"]
+        ]
+        footer: [
+            ["ACME Corp" ['i] "%TIME%" "Page %PAGE% of %PAGES%" ['b]]
         ]
 
         append/only content reduce [
             'table 'box 'alt
-            ['< 160 "Item" '^ 100 "Status" '> 100 "Amount"]
-            ['i "Widget A" /i 'b 'u "Active" /u /b "$250.00"]
-            ['b "Gadget B" /b 'u "Pending" /u "$420.00"]
-            ['b 'i "Service C" /i /b 'i 'u "Completed" /u /i "$125.00"]
+            ["Item" ['< 160] "Status" ['^ 100] "Amount" ['> 100]]
+            ["Widget A" ['i] "Active" ['b 'u] "$250.00"]
+            ["Gadget B" ['b] "Pending" ['u] "$420.00"]
+            ["Service C" ['b 'i] "Completed" ['i 'u] "$125.00"]
             ["Regular Item" "Active" "$100.00"]
         ]
 
         append content [
             [""]
-            ['h2 "Summary" /h2]
+            ["Summary" ['h2]]
             [""]
-            ["Tags: 'b '/b 'i '/i 'u '/u 'h1 '/h1 'h2 '/h2 'h3 '/h3"]
-            ["Line-level: 'm 'h1 'h2 'h3 (at start of block)"]
+            ["Tags: data ['b] data ['i] data ['u] data ['h1] data ['h2] data ['h3]"]
+            ["Line-level: ['m] ['h1] ['h2] ['h3] (as style block after data)"]
         ]
 
-        footer: [
-            ['i "ACME Corp" /i "%TIME%" 'b "Page %PAGE% of %PAGES%" /b]
-        ]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/text-styles-report.pdf
-        ][
-            generate-report header content footer %reports/text-styles-report.pdf
-        ]
+        emit-report %text-styles-report.pdf
     ]
 
     button "Mono Font" blue [
         header: [
-            ['m "ACME Corp" 'b "Mono Demo" /b 'i "Internal" /i]
+            ["ACME Corp" ['m] "Mono Demo" ['b] "Internal" ['i]]
         ]
-
         content: copy [
-            ['m "Monospaced text is ideal for aligned columns."]
-            ['m 'b "Bold mono for emphasis." /b]
-            ['m 'i "Italic mono for variety." /i]
-            ['m 'b 'i 'u "Bold italic underline mono." /u /i /b]
+            ["Monospaced text is ideal for aligned columns." ['m]]
+            ["Bold mono for emphasis." ['m 'b]]
+            ["Italic mono for variety." ['m 'i]]
+            ["Bold italic underline mono." ['m 'b 'i 'u]]
             [""]
-            ['m "Column alignments in mono:"]
+            ["Column alignments in mono:" ['m]]
+        ]
+        footer: [
+            ["Mono Demo" ['m] "%TIME%" "Page %PAGE% of %PAGES%" ['b]]
         ]
 
         append/only content reduce [
             'table 'box 'alt
-            ['< 150 "Name" '> 80 "Value" '^ 100 "Code"]
-            ['m "Alpha" /m "123.45" "AB-001"]
-            ['m "Beta" /m "67.89" "CD-002"]
-            ['m "Gamma" /m "901.23" "EF-003"]
-            ['b "TOTAL" /b "1092.57" ""]
+            ["Name" ['< 150] "Value" ['> 80] "Code" ['^ 100]]
+            ["Alpha" ['m] "123.45" "AB-001"]
+            ["Beta" ['m] "67.89" "CD-002"]
+            ["Gamma" ['m] "901.23" "EF-003"]
+            ["TOTAL" ['b] "1092.57" ""]
         ]
 
         append content [
             [""]
-            ['m "Regular mono"]
-            ['m 'b "Bold mono" /b]
-            ['m 'i "Italic mono" /i]
+            ["Regular mono" ['m]]
+            ["Bold mono" ['m 'b]]
+            ["Italic mono" ['m 'i]]
             [""]
-            ['h2 "Headings still use proportional font" /h2]
+            ["Headings still use proportional font" ['h2]]
         ]
 
-        footer: [
-            ['m "Mono Demo" "%TIME%" 'b "Page %PAGE% of %PAGES%" /b]
-        ]
-
-        either preview/data [
-            generate-report/browser header content footer %reports/mono-report.pdf
-        ][
-            generate-report header content footer %reports/mono-report.pdf
-        ]
+        emit-report %mono-report.pdf
     ]
 
     button "Number Formatting" blue [
         header: [
             "Number & Money Formatting"
         ]
-
         content: copy []
+        footer: [
+            ["Page %PAGE% of %PAGES%" ['b]]
+        ]
 
         append content [
             ["Tables support automatic number formatting."]
@@ -375,11 +352,11 @@ view/options layout [
 
         append/only content reduce [
             'table 'box 'alt
-            ['< 150 "Item" '> 80 "Qty" '> 100 5.4 "Weight" '> 100 'money "Price" '> 100 'money "Total"]
+            ["Item" ['< 150] "Qty" ['> 80] "Weight" ['> 100 5.4] "Price" ['> 100 'money] "Total" ['> 100 'money]]
             ["Widget" 100 3.14159 25.00 2500]
             ["Gadget" 50 0.001 42.50 2125.0]
             ["Parts" 200 1234.5678 0.75 150.0]
-            ['b "TOTALS" /b 350 "" "" 4775.00]
+            ["TOTALS" ['b] 350 "" "" 4775.00]
         ]
 
         append content [
@@ -387,16 +364,42 @@ view/options layout [
             ["Negative values get a minus prefix."]
         ]
 
+        emit-report %format-report.pdf
+    ]
+
+    button "Mixed Sizes" blue [
+        header: [
+            ["Mixed Font Size Demo" ['h1]]
+            [" " " " "%DATETIME%" ['b]]
+        ]
+        content: copy []
         footer: [
-            ['b "Page %PAGE% of %PAGES%" /b]
+            ["ACME Corp" ['b] "%TIME%" "Page %PAGE% of %PAGES%"]
         ]
 
-        either preview/data [
-            generate-report/browser header content footer %reports/format-report.pdf
-        ][
-            generate-report header content footer %reports/format-report.pdf
+        append content [
+            ["Per-segment heading styles mixed with regular text:"]
+            [""]
+            ["Big title " ['h1] "followed by normal text."]
+            ["Regular " [] "bold " ['b] "italic " ['i] "and " ['h3] "small heading" [] " together."]
+            ["Mono " ['m] "mixed with " [] "h2 heading" ['h2] " and " [] "bold underline" ['b 'u] "."]
+            [""]
+            ["The line height adapts to the tallest segment on each line."]
+            [""]
+            ["Table with heading-sized cells:"]
         ]
+
+        append/only content reduce [
+            'table 'box 'alt
+            ["Category" ['< 150] "Label" ['< 180] "Value" ['> 100]]
+            ["Revenue" ['h3] "Total income" 50000]
+            ["Costs" ['b] "Operating expenses" 35000]
+            ["Net" ['h2] "Profit" ['b 'u] 15000]
+            ["Plain" "Regular row" 0]
+        ]
+
+        emit-report %mixed-sizes-report.pdf
     ]
 
     button "Exit" red [unview]
-][size: 700x470]
+][size: 400x500]
