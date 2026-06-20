@@ -715,6 +715,7 @@ context [
                 item = 'FOOTER  [current: 'footer  footer: copy []]
                 true [
                     if not none? item [
+                        either word? item [item: eval-val item][]
                         case [
                             current = 'header  [append/only header item]
                             current = 'content [append/only content item]
@@ -877,36 +878,36 @@ context [
                         col-per-col: ceil-div col-total col-num
                         col-idx: 1
                         col-remaining: col-total
-                        while [col-idx <= col-total][
-                            ; how many rows fit on this page
+                        while [col-remaining > 0][
+                            ; rows available on this page
                             col-avail: to integer! (page-y - page-bottom) / line-height
                             if col-avail < 1 [new-page col-avail: to integer! (page-y - page-bottom) / line-height]
-                            col-rows-this-page: col-avail - (col-avail // col-per-col)
-                            if col-rows-this-page < col-per-col [col-rows-this-page: col-avail]
-                            if col-rows-this-page > col-remaining [col-rows-this-page: col-remaining]
-                            ; actual columns needed for this page's rows
-                            col-cols-needed: ceil-div col-rows-this-page col-per-col
-                            if col-cols-needed > col-num [col-cols-needed: col-num]
-                            col-rows-per-render: ceil-div col-rows-this-page col-cols-needed
-                            ; render rows in column-major order
-                            col-render-idx: 0
-                            repeat col-ci col-cols-needed [
-                                col-x: margin-left + ((col-ci - 1) * (col-col-w + col-gap))
-                                append page-content rejoin ["gsave " (col-x - margin-left) " 0 translate" lf]
-                                col-base: col-idx + ((col-ci - 1) * col-rows-per-render)
-                                repeat col-ri col-rows-per-render [
-                                    col-r: col-base + col-ri - 1
+                            ; rows per column that fit, capped at remaining
+                            col-rows-per-col: col-per-col
+                            if col-rows-per-col > col-avail [col-rows-per-col: col-avail]
+                            ; columns we can fill
+                            col-cols-fit: col-num
+                            if (col-cols-fit * col-rows-per-col) > col-remaining [
+                                col-cols-fit: ceil-div col-remaining col-rows-per-col
+                            ]
+                            ; render in column-major order
+                            col-rendered: 0
+                            repeat col-ci col-cols-fit [
+                                col-x: (col-ci - 1) * (col-col-w + col-gap)
+                                append page-content rejoin ["gsave " col-x " 0 translate" lf]
+                                repeat col-ri col-rows-per-col [
+                                    col-r: col-idx + ((col-ci - 1) * col-rows-per-col) + col-ri - 1
                                     if col-r <= col-total [
                                         col-emit-y: page-y - ((col-ri - 1) * line-height)
                                         emit-content-line page-content col-rows/:col-r col-emit-y
-                                        col-render-idx: col-render-idx + 1
+                                        col-rendered: col-rendered + 1
                                     ]
                                 ]
                                 append page-content rejoin ["grestore" lf]
                             ]
-                            col-idx: col-idx + col-render-idx
-                            col-remaining: col-remaining - col-render-idx
-                            page-y: page-y - (col-rows-per-render * line-height)
+                            col-idx: col-idx + col-rendered
+                            col-remaining: col-remaining - col-rendered
+                            page-y: page-y - (col-rows-per-col * line-height)
                             if col-remaining > 0 [new-page]
                         ]
                     ][
