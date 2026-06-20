@@ -508,6 +508,19 @@ context [
 
     col-w: does [page-width - margin-left - margin-right]
 
+    merge-styles: func [
+        "Merge line-wide styles into segment styles. Segment styles take precedence."
+        base [block!] "Line-wide styles (e.g. ['m])"
+        override [block!] "Segment styles (e.g. ['b])"
+        /local result s
+    ][
+        either empty? override [copy base][
+            result: copy base
+            foreach s override [unless find result s [append result s]]
+            result
+        ]
+    ]
+
     emit-content-line: func [
         out [string!] line-block [block!] page-y [integer!]
         /local parsed line-styles segments nsegs i styles text
@@ -518,15 +531,13 @@ context [
         nsegs: (length? segments) / 2
         if nsegs > 0 [
             either nsegs = 1 [
-                styles: segments/1
-                if all [empty? styles not empty? line-styles][styles: line-styles]
+                styles: merge-styles line-styles segments/1
                 emit-styled-text out margin-left page-y segments/2 col-w "L" styles
             ][
                 emit-text-start out margin-left page-y
                 i: 1
                 while [i <= length? segments][
-                    styles: pick segments i
-                    if all [empty? styles not empty? line-styles][styles: line-styles]
+                    styles: merge-styles line-styles pick segments i
                     text: pick segments (i + 1)
                     emit-styled-text/join out margin-left page-y text col-w "L" styles
                     i: i + 2
@@ -549,18 +560,14 @@ context [
         nsegs: (length? segments) / 2
         if nsegs > 0 [
             repeat idx nsegs [
-                styles: pick segments ((idx - 1) * 2 + 1)
+                styles: merge-styles line-styles pick segments ((idx - 1) * 2 + 1)
                 text: pick segments (idx * 2)
                 align: case [idx = 1 ["L"] idx = 2 ["C"] idx = 3 ["R"] true ["L"]]
                 text: replace-tokens text page-num total-pages date-str time-str datetime-str
-                either all [empty? styles not empty? line-styles][
-                    emit-styled-text out margin-left y text col-w align line-styles
+                either all [empty? styles default-style][
+                    emit-styled-text out margin-left y text col-w align def-styles
                 ][
-                    either all [empty? styles default-style][
-                        emit-styled-text out margin-left y text col-w align def-styles
-                    ][
-                        emit-styled-text out margin-left y text col-w align styles
-                    ]
+                    emit-styled-text out margin-left y text col-w align styles
                 ]
             ]
         ]
