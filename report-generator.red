@@ -849,10 +849,20 @@ context [
                     ]
                     page-y: page-y - line-height
                 ][
-                    page-y: page-y - heading-gap item
-                    if (page-y - line-height) < page-bottom [new-page]
-                    emit-content-line page-content item page-y
-                    page-y: page-y - line-height
+                    either all [
+                        not empty? item
+                        string? first item
+                        (first item) = "^L"
+                        (length? item) > 1
+                        number? item/2
+                    ][
+                        if (page-y - (item/2 * line-height)) < page-bottom [new-page]
+                    ][
+                        page-y: page-y - heading-gap item
+                        if (page-y - line-height) < page-bottom [new-page]
+                        emit-content-line page-content item page-y
+                        page-y: page-y - line-height
+                    ]
                 ]
             ][
                 if string? item [
