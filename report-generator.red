@@ -743,10 +743,9 @@ context [
             date-str time-str datetime-str new-page
             table-col-idx rows-start row-item boxed? alt?
             mods result sections hdr ctn ftr
-            col-col-w col-gap col-rows col-total col-num col-per-col
-            col-idx col-remaining col-avail col-rows-this-page
-            col-cols-needed col-rows-per-render col-render-idx
-            col-ci col-base col-ri col-r col-x col-emit-y
+            col-col-w col-gap col-rows col-total col-num
+            col-idx col-remaining col-avail col-rows-per-col
+            col-cols-fit col-rendered col-ci col-r col-x col-emit-y
     ][
         sections: parse-sections content
         hdr: sections/1
@@ -875,22 +874,19 @@ context [
                         col-total: length? col-rows
                         col-num: to integer! (page-width - margin-left - margin-right) / (col-col-w + col-gap)
                         if col-num < 1 [col-num: 1]
-                        col-per-col: ceil-div col-total col-num
                         col-idx: 1
                         col-remaining: col-total
                         while [col-remaining > 0][
-                            ; rows available on this page
+                            ; how many rows each column needs to show all remaining
+                            col-rows-per-col: ceil-div col-remaining col-num
                             col-avail: to integer! (page-y - page-bottom) / line-height
                             if col-avail < 1 [new-page col-avail: to integer! (page-y - page-bottom) / line-height]
-                            either col-remaining <= col-avail [
-                                ; all remaining rows fit — distribute evenly across columns
+                            either col-rows-per-col <= col-avail [
+                                ; all remaining fits — distribute evenly
                                 col-cols-fit: col-num
-                                if col-cols-fit > col-remaining [col-cols-fit: col-remaining]
-                                col-rows-per-col: ceil-div col-remaining col-cols-fit
                             ][
-                                ; fill page with as many rows per column as fit
-                                col-rows-per-col: col-per-col
-                                if col-rows-per-col > col-avail [col-rows-per-col: col-avail]
+                                ; won't fit — use as many rows as page allows
+                                col-rows-per-col: col-avail
                                 col-cols-fit: col-num
                             ]
                             ; render in column-major order
@@ -900,7 +896,7 @@ context [
                                 append page-content rejoin ["gsave " col-x " 0 translate" lf]
                                 repeat col-ri col-rows-per-col [
                                     col-r: col-idx + ((col-ci - 1) * col-rows-per-col) + col-ri - 1
-                                    if all [col-r >= col-idx col-r <= col-total][
+                                    if col-r <= col-total [
                                         col-emit-y: page-y - ((col-ri - 1) * line-height)
                                         emit-content-line page-content col-rows/:col-r col-emit-y
                                         col-rendered: col-rendered + 1
