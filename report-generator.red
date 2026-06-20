@@ -882,13 +882,16 @@ context [
                             ; rows available on this page
                             col-avail: to integer! (page-y - page-bottom) / line-height
                             if col-avail < 1 [new-page col-avail: to integer! (page-y - page-bottom) / line-height]
-                            ; rows per column that fit, capped at remaining
-                            col-rows-per-col: col-per-col
-                            if col-rows-per-col > col-avail [col-rows-per-col: col-avail]
-                            ; columns we can fill
-                            col-cols-fit: col-num
-                            if (col-cols-fit * col-rows-per-col) > col-remaining [
-                                col-cols-fit: ceil-div col-remaining col-rows-per-col
+                            either col-remaining <= col-avail [
+                                ; all remaining rows fit — distribute evenly across columns
+                                col-cols-fit: col-num
+                                if col-cols-fit > col-remaining [col-cols-fit: col-remaining]
+                                col-rows-per-col: ceil-div col-remaining col-cols-fit
+                            ][
+                                ; fill page with as many rows per column as fit
+                                col-rows-per-col: col-per-col
+                                if col-rows-per-col > col-avail [col-rows-per-col: col-avail]
+                                col-cols-fit: col-num
                             ]
                             ; render in column-major order
                             col-rendered: 0
@@ -897,7 +900,7 @@ context [
                                 append page-content rejoin ["gsave " col-x " 0 translate" lf]
                                 repeat col-ri col-rows-per-col [
                                     col-r: col-idx + ((col-ci - 1) * col-rows-per-col) + col-ri - 1
-                                    if col-r <= col-total [
+                                    if all [col-r >= col-idx col-r <= col-total][
                                         col-emit-y: page-y - ((col-ri - 1) * line-height)
                                         emit-content-line page-content col-rows/:col-r col-emit-y
                                         col-rendered: col-rendered + 1
