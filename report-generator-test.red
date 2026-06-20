@@ -1,12 +1,10 @@
 Red [
-    Title: "Report Generator - Test (v3 DSL)"
+    Title: "Report Generator - Test (v4 DSL)"
 ]
 
 do %report-generator.red
 
-header:  []
-content: []
-footer:  none
+rpt: copy []
 
 emit-report: func [
     file-name [file!]
@@ -14,11 +12,11 @@ emit-report: func [
 ][
     pdf: rejoin [%reports/ file-name]
     either preview/data [
-        generate-report/browser header content footer pdf
+        generate-report/browser rpt pdf
         wait 1
         delete pdf
     ][
-        generate-report header content footer pdf
+        generate-report rpt pdf
     ]
 ]
 
@@ -28,57 +26,50 @@ view/options layout [
     preview: check "Preview" false
 
     button "Text Report" blue [
-        header: [
-            ["ACME Corp" "Monthly Sales Report"]
-            [" " " " "%DATETIME%" ['b]]
-        ]
-        content: copy []
-        footer: [["Confidential" ['b] "%DATE%" "Page %PAGE% of %PAGES%"]]
-
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt [['b] "ACME Corp" "Monthly Sales Report"]
+        append/only rpt [" " " " "%DATETIME%" ['b]]
+        append rpt 'CONTENT
         i: 0
         while [i < 60][
             i: i + 1
-            append/only content reduce [rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]]
+            append/only rpt reduce [rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]]
         ]
-
+        append rpt 'FOOTER
+        append/only rpt [['b] "Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]
         emit-report %text-report.pdf
     ]
 
     button "Table Report" blue [
-        header: ["Product Inventory"]
-        content: copy []
-        footer: [["Page %PAGE% of %PAGES%" "" "%TIME%"]]
-
-        append/only content reduce [
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt ["Product Inventory"]
+        append rpt 'CONTENT
+        append/only rpt reduce [
             'table
             ["Product" ['< 180] "Qty" ['> 60] "Price" ['> 80] "Total" ['> 80]]
             ["Widget A" "10" "$25.00" "$250.00"]
             ["Widget B" "5" "$42.00" "$210.00"]
             ["Gadget X" "23" "$12.50" "$287.50"]
         ]
-
+        append rpt 'FOOTER
+        append/only rpt [["Page %PAGE% of %PAGES%" "" "%TIME%"]]
         emit-report %table-report.pdf
     ]
 
     button "Unified Report" blue [
-        header: [
-            "ACME Corporation"
-            "Quarterly Report"
-        ]
-        content: copy []
-        footer: [
-            ["" "ACME Corp - Confidential" ""]
-            ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
-        ]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt ["ACME Corporation"]
+        append/only rpt ["Quarterly Report"]
+        append rpt 'CONTENT
+        append/only rpt ["Sales Summary" ['b]]
+        append/only rpt [""]
+        append/only rpt ["Below is the Q1 sales data for all product lines."]
+        append/only rpt ["Revenue targets were met across all categories."]
 
-        append content [
-            ["Sales Summary" ['b]]
-            [""]
-            ["Below is the Q1 sales data for all product lines."]
-            ["Revenue targets were met across all categories."]
-        ]
-
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'box 'alt
             ["Product" ['< 180] "Qty" ['> 60] "Price" ['> 80] "Total" ['> 80]]
             ["Widget A" "120" "$25.00" "$3000.00"]
@@ -91,10 +82,10 @@ view/options layout [
         i: 0
         repeat x 10 [
             i: i + 1
-            append/only content reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
+            append/only rpt reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
         ]
 
-        append/only content reduce [
+        append/only rpt reduce [
             'table
             ["Product" ['< 180] "Qty" ['> 60] "Price" ['> 80] "Total" ['> 80]]
             ["Widget A" "120" "$25.00" "$3000.00"]
@@ -103,17 +94,15 @@ view/options layout [
 
         repeat x 7 [
             i: i + 1
-            append/only content reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
+            append/only rpt reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
         ]
 
-        append content ["^L"]
-        append content [
-            ["Expenses" ['b]]
-            [""]
-            ["Operating expenses for the quarter."]
-        ]
+        append/only rpt ["^L"]
+        append/only rpt ["Expenses" ['b]]
+        append/only rpt [""]
+        append/only rpt ["Operating expenses for the quarter."]
 
-        append/only content reduce [
+        append/only rpt reduce [
             'table
             ["Category" ['< 200] "Amount" ['> 100]]
             ["Rent" "$4500.00"]
@@ -124,85 +113,62 @@ view/options layout [
 
         repeat x 40 [
             i: i + 1
-            append/only content reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
+            append/only rpt reduce [rejoin ["Record #" i ": Product widget #" i " - Qty: " (i * 3)]]
         ]
 
-        append content [
-            [""]
-            ["Net Profit: $4157.00" ['b]]
-            [""]
-            ["End of quarterly report" ['u]]
-        ]
+        append/only rpt [""]
+        append/only rpt ["Net Profit: $4157.00" ['b]]
+        append/only rpt [""]
+        append/only rpt ["End of quarterly report" ['u]]
 
+        append rpt 'FOOTER
+        append/only rpt ["" "ACME Corp - Confidential" ""]
+        append/only rpt ["Page %PAGE% of %PAGES%" "" "%DATETIME%"]
         emit-report %unified-report.pdf
     ]
 
     button "Page breaks" blue [
-        header: ["Inventory Report"]
-        content: copy []
-        footer: [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt ["Inventory Report"]
+        append rpt 'CONTENT
+        append/only rpt ["Full inventory listing:"]
 
-        append content [
-            ["Full inventory listing:"]
-        ]
-
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'alt
             ["ID" ['> 60] "Name" ['< 200] "Amount" ['> 100]]
-            ["1" "Item A" "$100.00"]
-            ["2" "Item B" "$200.00"]
-            ["3" "Item C" "$300.00"]
-            ["4" "Item D" "$400.00"]
-            ["5" "Item E" "$500.00"]
-            ["6" "Item F" "$600.00"]
-            ["7" "Item G" "$700.00"]
-            ["8" "Item H" "$800.00"]
-            ["9" "Item I" "$900.00"]
-            ["10" "Item J" "$1000.00"]
-            ["11" "Item K" "$1100.00"]
-            ["12" "Item L" "$1200.00"]
+            ["1" "Item A" "$100.00"] ["2" "Item B" "$200.00"] ["3" "Item C" "$300.00"]
+            ["4" "Item D" "$400.00"] ["5" "Item E" "$500.00"] ["6" "Item F" "$600.00"]
+            ["7" "Item G" "$700.00"] ["8" "Item H" "$800.00"] ["9" "Item I" "$900.00"]
+            ["10" "Item J" "$1000.00"] ["11" "Item K" "$1100.00"] ["12" "Item L" "$1200.00"]
             ["13" "Item M" "$1300.00"]
             ["^L" "" ""]
-            ["14" "Item N" "$1400.00"]
-            ["15" "Item O" "$1500.00"]
-            ["16" "Item P" "$1600.00"]
-            ["17" "Item Q" "$1700.00"]
-            ["18" "Item R" "$1800.00"]
-            ["19" "Item S" "$1900.00"]
-            ["20" "Item T" "$2000.00"]
-            ["21" "Item U" "$2100.00"]
-            ["22" "Item V" "$2200.00"]
-            ["23" "Item W" "$2300.00"]
-            ["24" "Item X" "$2400.00"]
-            ["25" "Item Y" "$2500.00"]
+            ["14" "Item N" "$1400.00"] ["15" "Item O" "$1500.00"] ["16" "Item P" "$1600.00"]
+            ["17" "Item Q" "$1700.00"] ["18" "Item R" "$1800.00"] ["19" "Item S" "$1900.00"]
+            ["20" "Item T" "$2000.00"] ["21" "Item U" "$2100.00"] ["22" "Item V" "$2200.00"]
+            ["23" "Item W" "$2300.00"] ["24" "Item X" "$2400.00"] ["25" "Item Y" "$2500.00"]
             ["26" "Item Z" "$2600.00"]
         ]
 
-        append content [
-            ["End of inventory."]
-        ]
+        append/only rpt ["End of inventory."]
 
+        append rpt 'FOOTER
+        append/only rpt [["Page %PAGE% of %PAGES%" "" "%DATETIME%"]]
         emit-report %pagebreak-report.pdf
     ]
 
     button "Multi-column Header/Footer" blue [
-        header: [
-            ["ACME Corp" "Quarterly Report" "Confidential"]
-            ["Dept: Sales" "" "%DATETIME%"]
-        ]
-        content: copy []
-        footer: [
-            ["ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
-        ]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt [['b] "ACME Corp" "Quarterly Report" "Confidential"]
+        append/only rpt ["Dept: Sales" "" "%DATETIME%" ['b]]
+        append rpt 'CONTENT
+        append/only rpt ["This report demonstrates multi-column header and footer lines."]
+        append/only rpt ["The header has left, center, and right text on each line."]
+        append/only rpt [""]
+        append/only rpt ["Sales by Region" ['b]]
 
-        append content [
-            ["This report demonstrates multi-column header and footer lines."]
-            ["The header has left, center, and right text on each line."]
-            [""]
-            ["Sales by Region" ['b]]
-        ]
-
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'box 'alt
             ["Region" ['< 160] "Q1" ['> 80] "Q2" ['> 80] "Total" ['> 80]]
             ["North" "$12000" "$14500" "$26500"]
@@ -213,27 +179,22 @@ view/options layout [
         ]
 
         repeat x 40 [
-            append/only content reduce [rejoin ["Detail line #" x ": Additional supporting data for the quarterly analysis."]]
+            append/only rpt reduce [rejoin ["Detail line #" x ": Additional supporting data for the quarterly analysis."]]
         ]
 
+        append rpt 'FOOTER
+        append/only rpt [['b] "ACME Corp" "%DATETIME%" "Page %PAGE% of %PAGES%"]
         emit-report %multicolumn-report.pdf
     ]
 
     button "Center-aligned Columns" blue [
-        header: [
-            ["Product Catalog" "Item Listing" "Rev 3"]
-        ]
-        content: copy []
-        footer: [
-            ["" "Center-aligned demo" ""]
-            ["Company Inc" "%DATE%" "Page %PAGE% of %PAGES%"]
-        ]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt [['b] "Product Catalog" "Item Listing" "Rev 3"]
+        append rpt 'CONTENT
+        append/only rpt ["Table below demonstrates center-aligned columns using style blocks."]
 
-        append content [
-            ["Table below demonstrates center-aligned columns using style blocks."]
-        ]
-
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'alt
             ["SKU" ['^ 80] "Product Name" ['< 200] "Category" ['^ 120] "Price" ['> 80]]
             ["W-001" "Widget Alpha" "Hardware" "$25.00"]
@@ -246,40 +207,37 @@ view/options layout [
             ["X-002" "Mounting Bracket" "Accessories" "$8.50"]
         ]
 
-        append content [
-            ["SKU and Category columns are center-aligned."]
-            ["Price column is right-aligned."]
-            ["Product Name is left-aligned."]
-        ]
+        append/only rpt ["SKU and Category columns are center-aligned."]
+        append/only rpt ["Price column is right-aligned."]
+        append/only rpt ["Product Name is left-aligned."]
 
+        append rpt 'FOOTER
+        append/only rpt ["" "Center-aligned demo" ""]
+        append/only rpt [['b] "Company Inc" "%DATE%" "Page %PAGE% of %PAGES%"]
         emit-report %center-align-report.pdf
     ]
 
     button "Text Styles" blue [
-        header: [
-            ["ACME Corp" ['b] "Style Demo" ['i] "Internal" ['u]]
-        ]
-        content: copy [
-            ["Bold Title" ['b]]
-            [""]
-            ["This line is italic." ['i]]
-            ["This line is underlined." ['u]]
-            ["This line is bold italic." ['b 'i]]
-            ["This line is bold and underlined." ['b 'u]]
-            ["This line is italic and underlined." ['i 'u]]
-            ["This line is bold, italic and underlined." ['b 'i 'u]]
-            [""]
-            ["Heading Level 1" ['h1]]
-            ["Heading Level 2" ['h2]]
-            ["Heading Level 3" ['h3]]
-            [""]
-            ["Styled table cells below:"]
-        ]
-        footer: [
-            ["ACME Corp" ['i] "%TIME%" "Page %PAGE% of %PAGES%" ['b]]
-        ]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt [['b] "ACME Corp" ['i] "Style Demo" ['u] "Internal"]
+        append rpt 'CONTENT
+        append/only rpt ["Bold Title" ['b]]
+        append/only rpt [""]
+        append/only rpt ["This line is italic." ['i]]
+        append/only rpt ["This line is underlined." ['u]]
+        append/only rpt ["This line is bold italic." ['b 'i]]
+        append/only rpt ["This line is bold and underlined." ['b 'u]]
+        append/only rpt ["This line is italic and underlined." ['i 'u]]
+        append/only rpt ["This line is bold, italic and underlined." ['b 'i 'u]]
+        append/only rpt [""]
+        append/only rpt ["Heading Level 1" ['h1]]
+        append/only rpt ["Heading Level 2" ['h2]]
+        append/only rpt ["Heading Level 3" ['h3]]
+        append/only rpt [""]
+        append/only rpt ["Styled table cells below:"]
 
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'box 'alt
             ["Item" ['< 160] "Status" ['^ 100] "Amount" ['> 100]]
             ["Widget A" ['i] "Active" ['b 'u] "$250.00"]
@@ -288,34 +246,30 @@ view/options layout [
             ["Regular Item" "Active" "$100.00"]
         ]
 
-        append content [
-            [""]
-            ["Summary" ['h2]]
-            [""]
-            ["Tags: data ['b] data ['i] data ['u] data ['h1] data ['h2] data ['h3]"]
-            ["Line-level: ['m] ['h1] ['h2] ['h3] (as style block after data)"]
-        ]
+        append/only rpt [""]
+        append/only rpt ["Summary" ['h2]]
+        append/only rpt [""]
+        append/only rpt ["Tags: data ['b] data ['i] data ['u] data ['h1] data ['h2] data ['h3]"]
+        append/only rpt ["Line-level: ['m] ['h1] ['h2] ['h3] (as style block after data)"]
 
+        append rpt 'FOOTER
+        append/only rpt [['i] "ACME Corp" "%TIME%" ['b] "Page %PAGE% of %PAGES%"]
         emit-report %text-styles-report.pdf
     ]
 
     button "Mono Font" blue [
-        header: [
-            ["ACME Corp" ['m] "Mono Demo" ['b] "Internal" ['i]]
-        ]
-        content: copy [
-            ["Monospaced text is ideal for aligned columns." ['m]]
-            ["Bold mono for emphasis." ['m 'b]]
-            ["Italic mono for variety." ['m 'i]]
-            ["Bold italic underline mono." ['m 'b 'i 'u]]
-            [""]
-            ["Column alignments in mono:" ['m]]
-        ]
-        footer: [
-            ["Mono Demo" ['m] "%TIME%" "Page %PAGE% of %PAGES%" ['b]]
-        ]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt [['m] "ACME Corp" ['b] "Mono Demo" ['i] "Internal"]
+        append rpt 'CONTENT
+        append/only rpt ["Monospaced text is ideal for aligned columns." ['m]]
+        append/only rpt ["Bold mono for emphasis." ['m 'b]]
+        append/only rpt ["Italic mono for variety." ['m 'i]]
+        append/only rpt ["Bold italic underline mono." ['m 'b 'i 'u]]
+        append/only rpt [""]
+        append/only rpt ["Column alignments in mono:" ['m]]
 
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'box 'alt
             ["Name" ['< 150] "Value" ['> 80] "Code" ['^ 100]]
             ["Alpha" ['m] "123.45" "AB-001"]
@@ -324,33 +278,27 @@ view/options layout [
             ["TOTAL" ['b] "1092.57" ""]
         ]
 
-        append content [
-            [""]
-            ["Regular mono" ['m]]
-            ["Bold mono" ['m 'b]]
-            ["Italic mono" ['m 'i]]
-            [""]
-            ["Headings still use proportional font" ['h2]]
-        ]
+        append/only rpt [""]
+        append/only rpt ["Regular mono" ['m]]
+        append/only rpt ["Bold mono" ['m 'b]]
+        append/only rpt ["Italic mono" ['m 'i]]
+        append/only rpt [""]
+        append/only rpt ["Headings still use proportional font" ['h2]]
 
+        append rpt 'FOOTER
+        append/only rpt [['m] "Mono Demo" "%TIME%" ['b] "Page %PAGE% of %PAGES%"]
         emit-report %mono-report.pdf
     ]
 
     button "Number Formatting" blue [
-        header: [
-            "Number & Money Formatting"
-        ]
-        content: copy []
-        footer: [
-            ["Page %PAGE% of %PAGES%" ['b]]
-        ]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt ["Number & Money Formatting"]
+        append rpt 'CONTENT
+        append/only rpt ["Tables support automatic number formatting."]
+        append/only rpt ["Use 'money for currency and 5.4 for decimal places."]
 
-        append content [
-            ["Tables support automatic number formatting."]
-            ["Use 'money for currency and 5.4 for decimal places."]
-        ]
-
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'box 'alt
             ["Item" ['< 150] "Qty" ['> 80] "Weight" ['> 100 5.4] "Price" ['> 100 'money] "Total" ['> 100 'money]]
             ["Widget" 100 3.14159 25.00 2500]
@@ -359,37 +307,31 @@ view/options layout [
             ["TOTALS" ['b] 350 "" "" 4775.00]
         ]
 
-        append content [
-            ["Numbers in table cells are formatted automatically."]
-            ["Negative values get a minus prefix."]
-        ]
+        append/only rpt ["Numbers in table cells are formatted automatically."]
+        append/only rpt ["Negative values get a minus prefix."]
 
+        append rpt 'FOOTER
+        append/only rpt [['b] "Page %PAGE% of %PAGES%"]
         emit-report %format-report.pdf
     ]
 
     button "Mixed Sizes" blue [
-        header: [
-            ["Mixed Font Size Demo" ['h1]]
-            [" " " " "%DATETIME%" ['b]]
-        ]
-        content: copy []
-        footer: [
-            ["ACME Corp" ['b] "%TIME%" "Page %PAGE% of %PAGES%"]
-        ]
+        rpt: copy []
+        append rpt 'HEADER
+        append/only rpt [['b] "Mixed Font Size Demo" [h1]]
+        append/only rpt [" " " " "%DATETIME%" ['b]]
+        append rpt 'CONTENT
+        append/only rpt ["Per-segment heading styles mixed with regular text:"]
+        append/only rpt [""]
+        append/only rpt ["Big title " ['h1] "followed by normal text."]
+        append/only rpt ["Regular " [] "bold " ['b] "italic " ['i] "and " ['h3] "small heading" [] " together."]
+        append/only rpt ["Mono " ['m] "mixed with " [] "h2 heading" ['h2] " and " [] "bold underline" ['b 'u] "."]
+        append/only rpt [""]
+        append/only rpt ["The line height adapts to the tallest segment on each line."]
+        append/only rpt [""]
+        append/only rpt ["Table with heading-sized cells:"]
 
-        append content [
-            ["Per-segment heading styles mixed with regular text:"]
-            [""]
-            ["Big title " ['h1] "followed by normal text."]
-            ["Regular " [] "bold " ['b] "italic " ['i] "and " ['h3] "small heading" [] " together."]
-            ["Mono " ['m] "mixed with " [] "h2 heading" ['h2] " and " [] "bold underline" ['b 'u] "."]
-            [""]
-            ["The line height adapts to the tallest segment on each line."]
-            [""]
-            ["Table with heading-sized cells:"]
-        ]
-
-        append/only content reduce [
+        append/only rpt reduce [
             'table 'box 'alt
             ["Category" ['< 150] "Label" ['< 180] "Value" ['> 100]]
             ["Revenue" ['h3] "Total income" 50000]
@@ -398,6 +340,8 @@ view/options layout [
             ["Plain" "Regular row" 0]
         ]
 
+        append rpt 'FOOTER
+        append/only rpt [['b] "ACME Corp" "%TIME%" "Page %PAGE% of %PAGES%"]
         emit-report %mixed-sizes-report.pdf
     ]
 

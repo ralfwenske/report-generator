@@ -29,64 +29,84 @@ do %report-generator.red
 ### Exported function
 
 ```red
-generate-report header content footer %report.pdf
-generate-report/browser header content footer %report.pdf   ; generate and open in default PDF viewer
+generate-report content %report.pdf
+generate-report/browser content %report.pdf   ; generate and open in default PDF viewer
 ```
 
 | Argument | Type | Description |
 |----------|------|-------------|
-| `header` | `block!` or `none!` | Lines shown at the top of every page. Supports style blocks and `%DATE%`/`%TIME%`/`%DATETIME%`/`%PAGE%`/`%PAGES%` tokens. |
-| `content` | `block!` | Mixed content: blocks for text lines, `'table` blocks for tables |
-| `footer` | `block!` or `none!` | Lines shown at the bottom of every page. Same format and token support as header. |
+| `content` | `block!` | Flat block with `'HEADER`, `'CONTENT`, `'FOOTER` sections |
 | `output` | `file!` | Output PDF file path |
 
-## DSL convention: data-then-style-block
+## Content structure
 
-The DSL uses a consistent **"data then style block"** pattern. Everything that is not a block is data to be displayed. A block that follows a data element contains style attributes that apply to that preceding element.
+The content block is a flat list of items delimited by section markers:
+
+```red
+generate-report [
+    'HEADER
+    header lines...
+    'CONTENT
+    content lines and tables...
+    'FOOTER
+    footer lines...
+] %report.pdf
+```
+
+Each section contains line blocks. Tables are inline — no nesting or `reduce` needed.
+
+### Section markers
+
+| Marker | Purpose |
+|--------|---------|
+| `'HEADER` | Lines shown at the top of every page |
+| `'CONTENT` | Report body: text lines and tables |
+| `'FOOTER` | Lines shown at the bottom of every page |
+
+Sections are optional. If `'HEADER` is omitted, no header is rendered. Same for `'FOOTER`.
+
+## Line blocks
+
+Each line is a block. The first element determines the type:
+
+- **Block** (first element is a block) — line-wide style, applies to all unstyled segments
+- **`'table`** (first element) — table definition
+- **Otherwise** — data elements followed by optional style blocks
+
+### Data-then-style-block pattern
+
+Data elements are followed by style blocks that apply to the preceding element:
 
 ```red
 ["Hello" ['b]]                ; "Hello" in bold
 ["Hello" ['b 'i]]             ; "Hello" in bold italic
-["Hello" ['b 'u 'm]]          ; "Hello" in bold, underlined, monospace
 ["Hello" ['h1]]               ; "Hello" as heading 1
 ["Hello" []]                  ; "Hello" unstyled (empty block)
 ["Hello"]                     ; "Hello" unstyled (no style block)
 ```
 
-Multiple data+style pairs can appear in a single line for mixed formatting:
+Multiple data+style pairs on one line:
 
 ```red
 ["Sales Summary" ['b] " for " "Q1 2015" ['u]]
-;   ^bold            ^regular    ^underlined
+;   ^bold              ^regular    ^underlined
 ```
 
-Style blocks are optional. Omitting the style block (or using `[]`) means no styling is applied.
+### Line-wide styles
 
-## Content block
-
-The `content` block is a list of items:
-
-- **Block** — a content line. Each line is a block of data elements with optional trailing style blocks.
-- **`"^L"` string** — forces a page break (legacy; also works as `["^L"]` block).
-- **Table block** — a nested block starting with `'table`, followed by optional modifiers, column definitions, and row data.
+When the first element of a line block is a block (not followed by data), it's a line-wide style. Segments without their own style block inherit the line-wide style:
 
 ```red
-content: copy []
-append content ["Bold heading" ['b]]
-append content ["Regular text"]
-append content [""]
-append/only content reduce [
-    'table 'box 'alt
-    ["Name" ['< 200] "Amount" ['> 100]]
-    ["Widget" 25.00]
-    ["Gadget" 42.00]
-]
-append content ["Text after table"]
+[['b] "ACME Corp" [h1] "Quarterly Report" [] "Confidential"]
+; ^line-wide bold  ^h1 for "ACME Corp"  ^regular (no style)  ^bold (inherited)
+```
+
+```red
+[['i] "ACME Corp" ['b 'h2] "%TIME%" "Page %PAGE% of %PAGES%"]
+; ^line-wide italic  ^bold h2 for "ACME Corp"  ^italic (inherited)  ^italic (inherited)
 ```
 
 ## Style attributes
-
-Style attributes are placed in a block after the data element they modify. They use words (not lit-words with `/` end-tags).
 
 | Attribute | Style |
 |-----------|-------|
@@ -98,33 +118,41 @@ Style attributes are placed in a block after the data element they modify. They 
 | `h2` | Heading 2 (18pt bold) |
 | `h3` | Heading 3 (14pt bold) |
 
-Attributes can be combined in a single block: `['b 'i 'u]` for bold italic underlined.
+Attributes can be combined: `['b 'i 'u]` for bold italic underlined.
 
-Headings default to bold font. All style attributes — including `'m`, `'h1`, `'h2`, `'h3` — can be applied per-segment. When a line has mixed font sizes, the line height adapts to the tallest segment. In tables, row heights similarly adapt to the largest font in the row.
+Headings default to bold font. All style attributes — including `'m`, `'h1`, `'h2`, `'h3` — can be applied per-segment. Line and row heights adapt to the tallest segment.
 
 ```red
 ["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
 ```
 
-### Examples
+## Tables
+
+Tables start with `'table` followed by optional modifiers, then a column definition block, then row blocks:
 
 ```red
-["Bold text" ['b]]
-["Bold italic" ['b 'i]]
-["Monospace line" ['m]]
-["Big heading" ['h1]]
-["Regular" ['b] " then italic" ['i]]
-["Big " ['h1] "and small" [] " on one line"]
-["Regular " [] "mono " ['m] "and " [] "bold" ['b] " mixed"]
+['table 'box 'alt
+    ["Product" ['< 180] "Qty" ['^ 60 5.4] "Total" ['> 80 'money]]
+    ["Widget A" 120 3000]
+    ["Widget B" "45" 1890.0]
+    ["TOTALS" ['b] "" 13780.00]
+]
 ```
 
-Works in headers, footers, content lines, and table cells.
+### Table modifiers
 
-## Column definitions
+| Modifier | Meaning |
+|----------|---------|
+| `'box` | Draw outer border around table |
+| `'alt` | Alternate row background (light gray on even rows) |
 
-Table columns are defined by a block of data+style pairs after `'table` (and optional modifiers). Each column title is followed by a style block specifying alignment, width, and format:
+Both can be combined: `'table 'box 'alt`. Column separators are always drawn. Header rows always have a gray background.
 
-```
+### Column definitions
+
+Each column title is followed by a style block specifying alignment, width, and format:
+
+```red
 ["Product" ['< 180] "Qty" ['^ 60 5.4] "Total" ['> 80 'money]]
 ```
 
@@ -138,56 +166,17 @@ Table columns are defined by a block of data+style pairs after `'table` (and opt
 | `5.4` | Format numbers with 4 decimal places |
 | `180` | Set column width in points (default: 80) |
 
-Column style blocks can be omitted — alignment defaults to left, width defaults to 80.
-
-## Table modifiers
-
-| Modifier | Meaning |
-|----------|---------|
-| `'box` | Draw outer border around table |
-| `'alt` | Alternate row background (light gray on even rows) |
-
-Both can be combined: `'table 'box 'alt`. Without modifiers, the table has no outer border and no alternating rows. Column separators are always drawn. Header rows always have a gray background.
-
-### Table examples
-
-```red
-; Boxed table with alternating rows and number formatting
-[
-    'table 'box 'alt
-    ["Product" ['< 180] "Qty" ['^ 60 5.4] "Total" ['> 80 'money]]
-    ["Widget A" 120 3000]
-    ["Widget B" "45" 1890.0]
-    ["TOTALS" ['b] "" 13780.00]
-]
-
-; Plain table (no box, no alternation)
-[
-    'table
-    ["Name" ['< 200] "Amount" ['> 100]]
-    ["Item A" 100.00]
-]
-
-; Columns with defaults (left-aligned, 80pt wide)
-[
-    'table
-    ["Name" [] "Amount" []]
-    ["Item A" 100.00]
-]
-```
-
 ### Styled table cells
 
-Style blocks work inside table rows, applying to the preceding cell:
+Style blocks work inside table rows:
 
 ```red
 ["Widget A" ['i] "Active" ['b 'u] 250.00]
-;  ^regular    ^italic  ^bold+underline ^regular
 ```
 
 ### Page breaks in tables
 
-Use a row where the first column is `"^L"` to break a table across pages. The table header is automatically repeated on the next page:
+Use a row where the first column is `"^L"` to break a table across pages. The table header is automatically repeated:
 
 ```red
 ["^L" "" ""]
@@ -201,17 +190,15 @@ Numbers in table cells are formatted automatically based on the column definitio
 - **`5.4`** — formats with 4 decimal places
 - **No format** — numbers displayed as-is
 
-Numbers can be Red integers, floats, or words that evaluate to numbers.
-
 ## Header and footer tokens
 
 | Token | Replaced with | Example output |
 |-------|---------------|----------------|
 | `%PAGE%` | Current page number | `3` |
 | `%PAGES%` | Total number of pages | `12` |
-| `%DATE%` | Current date | `2026-06-19` |
+| `%DATE%` | Current date | `2026-06-20` |
 | `%TIME%` | Current time (hh:mm) | `19:04` |
-| `%DATETIME%` | Date and time combined | `2026-06-19 19:04` |
+| `%DATETIME%` | Date and time combined | `2026-06-20 19:04` |
 
 Header and footer lines support positional alignment: 1st segment is left-aligned, 2nd is centered, 3rd is right-aligned.
 
@@ -220,7 +207,7 @@ Header and footer lines support positional alignment: 1st segment is left-aligne
 - A4 (595 x 842 pts)
 - 50pt margins on all sides
 - Font: Times-Roman 12pt, line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`'m` tag).
-- Line and row heights adapt to the largest font size in the line/row (e.g. `'h1` segments make the line taller)
+- Line and row heights adapt to the largest font size in the line/row
 - Table headers: always bold 12pt with gray background, fixed 19pt height
 - Table data rows: height adapts to largest segment font size
 - Column separators: thin 0.5pt lines
@@ -240,32 +227,32 @@ widgetC: ["Widget C" "245" ['b] 8890.00]
 threethousand: 3000
 
 generate-report 
-    [ ;HEADER
-        ["ACME Corp" [h1] "Quarterly Report" ['b] "Confidential"]
+    [   'HEADER
+        [['b] "ACME Corp" [h1] "Quarterly Report" [] "Confidential"]
         [" " " " "%DATETIME%" ['b]]
-    ] ;header
-    [ ;CONTENT
+
+        'CONTENT
         ["Sales Summary for " ['b] "Q1 2015" ['u]]
         ["Q1 sales data for all product lines." ['u]]
-        [
-            'table 'box 'alt
+
+        ['table 'box 'alt
             ["Product" ['< 180] "Qty" ['^ 60 5.4] "Total" ['> 80 'money]]
             ["Widget A" 120 threethousand ['b]]
             ["Widget B" "45" 1890.0]
             widgetC
             ["TOTALS" ['b] "" "$13'780.00"]
         ]
-        ["End of report."]
-    ] ;content
-    [ ;FOOTER
-        ["ACME Corp" ['b] "%TIME%" "Page %PAGE% of %PAGES%"]
-    ] ;footer
+        ["End of report." ['u]]
+
+        'FOOTER
+        [['i] "ACME Corp" ['b 'h2] "%TIME%" "Page %PAGE% of %PAGES%"]
+    ]
     %reports/example-simple.pdf
 ```
 
 ### Full example
 
-See [`example-full.red`](example-full.red) — run with `red example-full.red`. Generates a multi-page PDF demonstrating all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, center-aligned columns, styled table cells, dynamic content, and table page breaks.
+See [`example-full.red`](example-full.red) — run with `red example-full.red`. Generates a multi-page PDF demonstrating all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, center-aligned columns, styled table cells, dynamic content, table page breaks, and mixed font sizes.
 
 ### GUI test harness
 
@@ -296,27 +283,29 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 | `emit-text-start` | Initializes PS variables for a joined line |
 | `emit-underline` | Draws an underline beneath text |
 | `emit-styled-text` | Selects font, emits aligned text with styles |
-| `emit-segmented-line` | Emits a parsed line with positional L/C/R alignment |
-| `emit-rect` | Emits a stroked rectangle |
+| `emit-rect` | Emits a stroked rectangle (0.5pt lines) |
 | `emit-filled-rect` | Emits a filled rectangle with gray fill |
 | `emit-vline` | Emits a thin vertical line (column separator) |
-| `emit-header-v3` | Emits header lines with L/C/R positioning and styles |
-| `emit-footer-v3` | Emits footer lines with token replacement and styles |
-| `emit-content-line-v3` | Processes a content line block |
-| `emit-table-header-v3` | Emits a table header row with gray background |
-| `emit-table-row-v3` | Emits a table data row with style and format support |
+| `emit-header` | Emits header lines with L/C/R positioning and styles |
+| `emit-footer` | Emits footer lines with token replacement and styles |
+| `emit-header-line` | Emits a single header/footer line with line-wide style support |
+| `emit-content-line` | Emits a single content line with line-wide style support |
+| `emit-table-row` | Emits a table row (header or data) with box alignment |
+| `parse-sections` | Splits flat content into header/content/footer by lit-word markers |
+| `parse-line` | Extracts line-wide style block and segments from a line block |
 | `parse-row-segments` | Parses data+style blocks into `[styles text ...]` pairs |
-| `parse-columns-v3` | Parses column definitions with data+style blocks |
+| `parse-columns` | Parses column definitions with data+style blocks |
 | `table-modifiers` | Scans a table block for `'box`, `'alt`, and column index |
 | `max-style-size` | Returns the largest font size from style blocks in a line/row |
-| `line-height-for` | Returns effective line height based on max segment font size |
-| `row-height-for` | Returns effective table row height based on max segment font size |
+| `heading-gap` | Returns extra spacing above a line with heading-sized segments |
+| `row-height` | Returns effective table row height based on max segment font size |
 | `format-number-value` | Formats numbers as money or with decimal places |
 | `format-decimal` | Formats numbers with thousands separators |
 
 **Rendering pipeline:**
 
-1. Content is processed page by page, tracking `page-y` position
-2. Each page's PostScript is collected into a `pages` block
-3. Tokens are replaced per page, footers are emitted
-4. Final PS is assembled with DSC comments, converted to PDF
+1. `parse-sections` splits flat content into header/content/footer blocks
+2. Content is processed page by page, tracking `page-y` position
+3. Each page's PostScript is collected into a `pages` block
+4. Tokens are replaced per page, footers are emitted
+5. Final PS is assembled with DSC comments, converted to PDF

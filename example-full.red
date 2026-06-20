@@ -7,41 +7,45 @@ threethousand: 3000
 total: 1890.0
 
 i: 0
-content: copy []
+rpt: copy []
+
+;--- Header ---
+append rpt 'HEADER
+append/only rpt [['b] "ACME Corp" [h1] "Full Example Report" [] "Confidential"]
+append/only rpt [" " " " "%DATETIME%" ['b]]
+
+;--- Content ---
+append rpt 'CONTENT
 
 ;--- Section 1: Text with styles ---
-append content [
-    ["Report Generator Demo" ['h1]]
-    [""]
-    ["This report demonstrates all features of the report-generator module." ['b]]
-    [""]
-    ["Italic text" ['i]]
-    ["Underlined text" ['u]]
-    ["Bold text" ['b]]
-    ["Bold italic" ['b 'i]]
-    ["Bold underline" ['b 'u]]
-    ["Italic underline" ['i 'u]]
-    ["Bold italic underline" ['b 'i 'u]]
-    [""]
-    ["Monospace" ['h2]]
-    ["Monospaced text is ideal for aligned columns." ['m]]
-    ["Bold mono" ['m 'b]]
-    ["Italic mono" ['m 'i]]
-    [""]
-    ["Headings" ['h2]]
-    ["Heading Level 1" ['h1]]
-    ["Heading Level 2" ['h2]]
-    ["Heading Level 3" ['h3]]
-]
+append/only rpt ["Report Generator Demo" ['h1]]
+append/only rpt [""]
+append/only rpt ["This report demonstrates all features of the report-generator module." ['b]]
+append/only rpt [""]
+append/only rpt ["Italic text" ['i]]
+append/only rpt ["Underlined text" ['u]]
+append/only rpt ["Bold text" ['b]]
+append/only rpt ["Bold italic" ['b 'i]]
+append/only rpt ["Bold underline" ['b 'u]]
+append/only rpt ["Italic underline" ['i 'u]]
+append/only rpt ["Bold italic underline" ['b 'i 'u]]
+append/only rpt [""]
+append/only rpt ["Monospace" ['h2]]
+append/only rpt ["Monospaced text is ideal for aligned columns." ['m]]
+append/only rpt ["Bold mono" ['m 'b]]
+append/only rpt ["Italic mono" ['m 'i]]
+append/only rpt [""]
+append/only rpt ["Headings" ['h2]]
+append/only rpt ["Heading Level 1" ['h1]]
+append/only rpt ["Heading Level 2" ['h2]]
+append/only rpt ["Heading Level 3" ['h3]]
 
 ;--- Section 2: Boxed table with alternating rows ---
-append content [
-    [""]
-    ["Boxed Table with Alternating Rows" ['h2]]
-    ["A table with 'box and 'alt modifiers, number formatting, and styled cells."]
-]
+append/only rpt [""]
+append/only rpt ["Boxed Table with Alternating Rows" ['h2]]
+append/only rpt ["A table with 'box and 'alt modifiers, number formatting, and styled cells."]
 
-append/only content reduce [
+append/only rpt reduce [
     'table 'box 'alt
     ["Product" ['< 180] "Qty" ['^ 60 5.4] "Price" ['> 80 'money] "Total" ['> 80 'money]]
     ["Widget A" 120 25.00 3000.00]
@@ -51,14 +55,12 @@ append/only content reduce [
     ["TOTALS" ['b] 398 "" 10657.00]
 ]
 
-;--- Section 3: Plain table (no box, no alternation) ---
-append content [
-    [""]
-    ["Plain Table" ['h2]]
-    ["A table without 'box or 'alt — just column separators."]
-]
+;--- Section 3: Plain table ---
+append/only rpt [""]
+append/only rpt ["Plain Table" ['h2]]
+append/only rpt ["A table without 'box or 'alt — just column separators."]
 
-append/only content reduce [
+append/only rpt reduce [
     'table
     ["Category" ['< 200] "Amount" ['> 100]]
     ["Rent" 4500.00]
@@ -68,13 +70,11 @@ append/only content reduce [
 ]
 
 ;--- Section 4: Center-aligned columns ---
-append content [
-    [""]
-    ["Center-aligned Columns" ['h2]]
-    ["Demonstrates ^ (center) alignment in column definitions."]
-]
+append/only rpt [""]
+append/only rpt ["Center-aligned Columns" ['h2]]
+append/only rpt ["Demonstrates ^ (center) alignment in column definitions."]
 
-append/only content reduce [
+append/only rpt reduce [
     'table 'alt
     ["SKU" ['^ 80] "Product Name" ['< 200] "Category" ['^ 120] "Price" ['> 80]]
     ["W-001" "Widget Alpha" "Hardware" 25.00]
@@ -86,13 +86,11 @@ append/only content reduce [
 ]
 
 ;--- Section 5: Styled table cells ---
-append content [
-    [""]
-    ["Styled Table Cells" ['h2]]
-    ["Style tags work inside table cells."]
-]
+append/only rpt [""]
+append/only rpt ["Styled Table Cells" ['h2]]
+append/only rpt ["Style tags work inside table cells."]
 
-append/only content reduce [
+append/only rpt reduce [
     'table 'box 'alt
     ["Item" ['< 160] "Status" ['^ 100] "Amount" ['> 100]]
     ["Widget A" ['i] "Active" ['b 'u] 250.00]
@@ -102,13 +100,11 @@ append/only content reduce [
 ]
 
 ;--- Section 6: Mono table ---
-append content [
-    [""]
-    ["Monospace Table" ['h2]]
-    ["Using 'm for aligned mono columns." ['m]]
-]
+append/only rpt [""]
+append/only rpt ["Monospace Table" ['h2]]
+append/only rpt ["Using 'm for aligned mono columns." ['m]]
 
-append/only content reduce [
+append/only rpt reduce [
     'table 'box 'alt
     ["Name" ['< 150] "Value" ['> 80] "Code" ['^ 100]]
     ["Alpha" ['m] 123.45 "AB-001"]
@@ -118,27 +114,21 @@ append/only content reduce [
 ]
 
 ;--- Section 7: Dynamic content ---
-append content [
-    [""]
-    ["Dynamic Content" ['h2]]
-    ["Generating lines with a loop:"]
-]
+append/only rpt [""]
+append/only rpt ["Dynamic Content" ['h2]]
+append/only rpt ["Generating lines with a loop:"]
 
 repeat x 10 [
     i: i + 1
-    append/only content reduce [
-        rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]
-    ]
+    append/only rpt reduce [rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]]
 ]
 
 ;--- Section 8: Page break in table ---
-append content [
-    [""]
-    ["Table with Page Break" ['h2]]
-    ["A long table that breaks across pages using a ^L row."]
-]
+append/only rpt [""]
+append/only rpt ["Table with Page Break" ['h2]]
+append/only rpt ["A long table that breaks across pages using a ^L row."]
 
-append/only content reduce [
+append/only rpt reduce [
     'table 'alt
     ["ID" ['> 60] "Name" ['< 200] "Amount" ['> 100]]
     ["1" "Item A" 100.00] ["2" "Item B" 200.00] ["3" "Item C" 300.00]
@@ -150,30 +140,24 @@ append/only content reduce [
     ["16" "Item P" 1600.00] ["17" "Item Q" 1700.00] ["18" "Item R" 1800.00]
 ]
 
-append content [
-    [""]
-    ["End of report." ['b]]
-]
+append/only rpt [""]
+append/only rpt ["End of report." ['b]]
 
 ;--- Section 9: Mixed font sizes on one line ---
-append content [
-    [""]
-    ["Mixed Font Sizes" ['h2]]
-    ["Heading styles can be applied per-segment, mixed with regular text on the same line."]
-    ["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
-    [""]
-    ["The line height adapts to the tallest segment."]
-    ["Regular " [] "mono " ['m] "and " [] "bold italic" ['b 'i] " together."]
-]
+append/only rpt [""]
+append/only rpt ["Mixed Font Sizes" ['h2]]
+append/only rpt ["Heading styles can be applied per-segment, mixed with regular text on the same line."]
+append/only rpt ["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
+append/only rpt [""]
+append/only rpt ["The line height adapts to the tallest segment."]
+append/only rpt ["Regular " [] "mono " ['m] "and " [] "bold italic" ['b 'i] " together."]
 
 ;--- Section 10: Table with heading in a cell ---
-append content [
-    [""]
-    ["Headings in Table Cells" ['h2]]
-    ["Table rows expand to fit heading-sized text."]
-]
+append/only rpt [""]
+append/only rpt ["Headings in Table Cells" ['h2]]
+append/only rpt ["Table rows expand to fit heading-sized text."]
 
-append/only content reduce [
+append/only rpt reduce [
     'table 'box 'alt
     ["Category" ['< 160] "Description" ['< 200] "Amount" ['> 100]]
     ["Revenue" ['h3] "Total quarterly income" 50000.00]
@@ -182,17 +166,9 @@ append/only content reduce [
     ["Regular" "No special styling" 0.00]
 ]
 
+;--- Footer ---
+append rpt 'FOOTER
+append/only rpt [['i] "ACME Corp" ['b 'h2] "%TIME%" "Page %PAGE% of %PAGES%"]
+
 ;--- Generate ---
-generate-report
-    [ ;HEADER
-        ["ACME Corp" ['h1] "Full Example Report" ['b] "Confidential"]
-        [" " " " "%DATETIME%" ['b]]
-    ] ;header
-
-    content
-
-    [ ;FOOTER
-        ["ACME Corp" ['b] "%TIME%" "Page %PAGE% of %PAGES%"]
-    ] ;footer
-
-    %reports/example-full.pdf
+generate-report rpt %reports/example-full.pdf

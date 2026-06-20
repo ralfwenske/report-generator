@@ -1,6 +1,6 @@
 Red [
-    Title: "Report Generator Module v3"
-    Purpose: "Generate multi-page A4 PostScript reports with data-then-style-block DSL"
+    Title: "Report Generator Module v4"
+    Purpose: "Generate multi-page A4 PostScript reports with flat content DSL"
     Exports: [generate-report]
 ]
 
@@ -309,7 +309,7 @@ context [
 
     ;--- Parsing ---
 
-    parse-columns-v3: func [
+    parse-columns: func [
         "Parse column header row: data followed by style block"
         cols [block!]
         /local col-titles col-widths col-aligns col-formats col-bolds num-cols
@@ -413,11 +413,25 @@ context [
         result
     ]
 
-    ;--- Table helpers ---
-
-    is-table-block: func [item [block!]][
-        all [not empty? item item/1 = 'table]
+    parse-line: func [
+        "Parse a content line block. Returns [line-styles segments] where line-styles is the leading style block (or []) and segments is the parsed data+style pairs."
+        line-block [block!]
+        /local line-styles rest
+    ][
+        either all [
+            not empty? line-block
+            block? line-block/1
+        ][
+            line-styles: line-block/1
+            rest: copy next line-block
+        ][
+            line-styles: copy []
+            rest: line-block
+        ]
+        reduce [line-styles parse-row-segments rest]
     ]
+
+    ;--- Table helpers ---
 
     table-modifiers: func [
         "Scan table block for modifiers. Returns [boxed? alt? col-index]"
@@ -458,45 +472,25 @@ context [
 
     col-w: does [page-width - margin-left - margin-right]
 
-    emit-segmented-line: func [
-        "Emit a parsed line with positional alignment (1st=L, 2nd=C, 3rd=R)"
-        out [string!] x [integer!] y [integer!] line-block [block!]
-        cw [integer!] page-num [integer!] total-pages [integer!]
-        date-str [string!] time-str [string!] datetime-str [string!]
-        /default-style def-styles [block!]
-        /local segments nsegs idx styles text align
-    ][
-        segments: parse-row-segments line-block
-        nsegs: (length? segments) / 2
-        if nsegs > 0 [
-            repeat idx nsegs [
-                styles: pick segments ((idx - 1) * 2 + 1)
-                text: pick segments (idx * 2)
-                align: case [idx = 1 ["L"] idx = 2 ["C"] idx = 3 ["R"] true ["L"]]
-                text: replace-tokens text page-num total-pages date-str time-str datetime-str
-                either all [empty? styles default-style][
-                    emit-styled-text out x y text cw align def-styles
-                ][
-                    emit-styled-text out x y text cw align styles
-                ]
-            ]
-        ]
-    ]
-
-    emit-content-line-v3: func [
+    emit-content-line: func [
         out [string!] line-block [block!] page-y [integer!]
-        /local segments nsegs i styles text
+        /local parsed line-styles segments nsegs i styles text
     ][
-        segments: parse-row-segments line-block
+        parsed: parse-line line-block
+        line-styles: parsed/1
+        segments: parsed/2
         nsegs: (length? segments) / 2
         if nsegs > 0 [
             either nsegs = 1 [
-                emit-styled-text out margin-left page-y segments/2 col-w "L" segments/1
+                styles: segments/1
+                if all [empty? styles not empty? line-styles][styles: line-styles]
+                emit-styled-text out margin-left page-y segments/2 col-w "L" styles
             ][
                 emit-text-start out margin-left page-y
                 i: 1
                 while [i <= length? segments][
                     styles: pick segments i
+                    if all [empty? styles not empty? line-styles][styles: line-styles]
                     text: pick segments (i + 1)
                     emit-styled-text/join out margin-left page-y text col-w "L" styles
                     i: i + 2
@@ -505,9 +499,40 @@ context [
         ]
     ]
 
-    ;--- Header / Footer ---
+    emit-header-line: func [
+        "Emit a header/footer line with positional alignment (1st=L, 2nd=C, 3rd=R)"
+        out [string!] y [integer!] line-block [block!]
+        page-num [integer!] total-pages [integer!]
+        date-str [string!] time-str [string!] datetime-str [string!]
+        /default-style def-styles [block!]
+        /local parsed line-styles segments nsegs idx styles text align
+    ][
+        parsed: parse-line line-block
+        line-styles: parsed/1
+        segments: parsed/2
+        nsegs: (length? segments) / 2
+        if nsegs > 0 [
+            repeat idx nsegs [
+                styles: pick segments ((idx - 1) * 2 + 1)
+                text: pick segments (idx * 2)
+                align: case [idx = 1 ["L"] idx = 2 ["C"] idx = 3 ["R"] true ["L"]]
+                text: replace-tokens text page-num total-pages date-str time-str datetime-str
+                either all [empty? styles not empty? line-styles][
+                    emit-styled-text out margin-left y text col-w align line-styles
+                ][
+                    either all [empty? styles default-style][
+                        emit-styled-text out margin-left y text col-w align def-styles
+                    ][
+                        emit-styled-text out margin-left y text col-w align styles
+                    ]
+                ]
+            ]
+        ]
+    ]
 
-    emit-header-v3: func [
+    ;--- Header / Footer emit ---
+
+    emit-header: func [
         out [string!] hdr [block! none!] page-y [integer!]
         date-str [string!] time-str [string!] datetime-str [string!]
         /local line
@@ -515,7 +540,7 @@ context [
         if none? hdr [return page-y]
         foreach line hdr [
             either block? line [
-                emit-segmented-line/default-style out margin-left page-y line col-w 0 0 date-str time-str datetime-str ['b]
+                emit-header-line/default-style out page-y line 0 0 date-str time-str datetime-str ['b]
             ][
                 emit-styled-text out margin-left page-y (replace-tokens line 0 0 date-str time-str datetime-str) col-w "L" ['b]
             ]
@@ -525,7 +550,7 @@ context [
         page-y
     ]
 
-    emit-footer-v3: func [
+    emit-footer: func [
         out [string!] ftr [block! none!] page-num [integer!] total-pages [integer!]
         date-str [string!] time-str [string!] datetime-str [string!]
         /local ftr-y line
@@ -534,7 +559,7 @@ context [
         ftr-y: margin-bottom + ((length? ftr) * line-height)
         foreach line ftr [
             either block? line [
-                emit-segmented-line out margin-left ftr-y line col-w page-num total-pages date-str time-str datetime-str
+                emit-header-line out ftr-y line page-num total-pages date-str time-str datetime-str
             ][
                 emit-styled-text out margin-left ftr-y (replace-tokens line page-num total-pages date-str time-str datetime-str) col-w "L" []
             ]
@@ -544,14 +569,14 @@ context [
 
     ;--- Table emit ---
 
+    header-row-h: does [line-height + row-padding]
+
     emit-table-row: func [
         "Emit a table row (header or data). box-top = y - rh."
         out [string!] y [integer!] rh [integer!]
         tl [integer!] tw [integer!] boxed? [logic!]
-        is-header [logic!] "true for header row, false for data row"
-        row-num [integer!] "row number (for alternating fill, 0 for header)"
-        col-info [block!]
-        row [block!]
+        is-header [logic!] row-num [integer!]
+        col-info [block!] row [block!]
         /local box-top text-y
             ct cw ca cf cb nc ci col-x col-w col-text col-align col-format
             raw-val text styles col-styles final-styles s
@@ -622,15 +647,40 @@ context [
         ]
     ]
 
+    ;--- Section parser ---
+
+    parse-sections: func [
+        "Parse flat content into [header content footer]. Sections are delimited by 'HEADER 'CONTENT 'FOOTER lit-words."
+        block [block!]
+        /local header content footer current item
+    ][
+        header: none
+        content: copy []
+        footer: none
+        current: 'content
+
+        foreach item block [
+            case [
+                item = 'HEADER  [current: 'header  header: copy []]
+                item = 'CONTENT [current: 'content]
+                item = 'FOOTER  [current: 'footer  footer: copy []]
+                true [
+                    case [
+                        current = 'header  [append/only header item]
+                        current = 'content [append/only content item]
+                        current = 'footer  [append/only footer item]
+                    ]
+                ]
+            ]
+        ]
+        reduce [header content footer]
+    ]
+
     ;--- Main entry point ---
 
-    header-row-h: does [line-height + row-padding]
-
     set 'generate-report func [
-        "Generate a multi-page A4 report with data-then-style-block DSL"
-        header [block! none!]   "Optional header lines (shown at top of each page)"
-        content [block!]        "Content: blocks for lines, 'table blocks for tables"
-        footer [block! none!]   "Optional footer lines"
+        "Generate a multi-page A4 report"
+        content [block!]        "Content block with 'HEADER 'CONTENT 'FOOTER sections"
         output [file!]          "Output PDF file path"
         /browser                "Generate PDF and open in default PDF viewer"
         /local usable-top usable-bottom page-bottom
@@ -640,14 +690,19 @@ context [
             row-num table-total-h ci table-columns table-rows
             date-str time-str datetime-str new-page
             table-col-idx rows-start row-item boxed? alt?
-            mods ftr result
+            mods result sections hdr ctn ftr
     ][
+        sections: parse-sections content
+        hdr: sections/1
+        ctn: sections/2
+        ftr: sections/3
+
         usable-top: page-height - margin-top
         usable-bottom: margin-bottom
-        page-bottom: usable-bottom + either ftr: footer [(length? ftr) * line-height][0]
+        page-bottom: usable-bottom + either ftr [(length? ftr) * line-height][0]
 
         date-str: form now/date
-        time-str: copy/part form now/time 5
+        time-str: copy/part form now/time ((length? form now/time) - 3)
         datetime-str: rejoin [date-str " " time-str]
 
         pages: copy []
@@ -657,7 +712,7 @@ context [
         emit-font page-content regular-font
 
         page-y: usable-top
-        page-y: emit-header-v3 page-content header page-y date-str time-str datetime-str
+        page-y: emit-header page-content hdr page-y date-str time-str datetime-str
         page-y: page-y - line-height
 
         new-page: does [
@@ -666,13 +721,13 @@ context [
             page-content: copy ""
             emit-font page-content regular-font
             page-y: usable-top
-            page-y: emit-header-v3 page-content header page-y date-str time-str datetime-str
+            page-y: emit-header page-content hdr page-y date-str time-str datetime-str
             page-y: page-y - line-height
         ]
 
-        foreach item content [
+        foreach item ctn [
             either block? item [
-                either is-table-block item [
+                either all [not empty? item item/1 = 'table][
                     mods: table-modifiers item
                     boxed?: mods/1
                     alt?: mods/2
@@ -687,7 +742,7 @@ context [
                         ci: ci + 1
                     ]
 
-                    col-info: parse-columns-v3 table-columns
+                    col-info: parse-columns table-columns
                     num-cols: col-info/6
 
                     table-left: margin-left
@@ -745,17 +800,18 @@ context [
                             page-y: page-y - row-h
                         ]
                     ]
+                    page-y: page-y - line-height
                 ][
                     page-y: page-y - heading-gap item
                     if (page-y - line-height) < page-bottom [new-page]
-                    emit-content-line-v3 page-content item page-y
+                    emit-content-line page-content item page-y
                     page-y: page-y - line-height
                 ]
             ][
                 if string? item [
                     if item = "^L" [new-page continue]
                     if (page-y - line-height) < page-bottom [new-page]
-                    emit-content-line-v3 page-content reduce [item] page-y
+                    emit-content-line page-content reduce [item] page-y
                     page-y: page-y - line-height
                 ]
             ]
@@ -785,7 +841,7 @@ context [
             append out-ps "0 setgray 1 setlinewidth"
             append out-ps lf
             append out-ps page-ps
-            emit-footer-v3 out-ps footer p total-pages date-str time-str datetime-str
+            emit-footer out-ps ftr p total-pages date-str time-str datetime-str
             append out-ps "showpage"
             append out-ps lf
         ]
