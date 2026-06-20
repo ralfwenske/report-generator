@@ -25,27 +25,31 @@ view/options layout [
     text 350x20 "Report Generator Test" bold white center
     preview: check "Preview" false
 
-    button "Text Report" blue [
-        rpt: copy []
-        append rpt 'HEADER
-        append/only rpt [['b] "ACME Corp" "Monthly Sales Report"]
-        append/only rpt [" " " " "%DATETIME%" ['b]]
-        append rpt 'CONTENT
+    button "Text Report" [
+        rpt: copy [
+            'HEADER
+            [['b] "ACME Corp" "Monthly Sales Report"]
+            [" " " " "%DATETIME%" ['b]]
+            'CONTENT
+        ]
         i: 0
         while [i < 60][
             i: i + 1
-            append/only rpt reduce [rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]]
+            append/only rpt reduce ["Record #" [] i ['b 5.0] ": Product widget #" i " - Qty: " i * 3] 
         ]
-        append rpt 'FOOTER
-        append/only rpt [['b] "Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]
+        append/only rpt [
+            'FOOTER          
+            [['b] "Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]
+        ]
         emit-report %text-report.pdf
     ]
 
-    button "Table Report" blue [
-        rpt: copy []
-        append rpt 'HEADER
-        append/only rpt ["Product Inventory"]
-        append rpt 'CONTENT
+    button "Table Report" [
+        rpt: copy [
+            'HEADER
+            ["Product Inventory"]
+            'CONTENT
+        ]
         append/only rpt reduce [
             'table
             ["Product" ['< 180] "Qty" ['> 60] "Price" ['> 80] "Total" ['> 80]]
@@ -53,8 +57,10 @@ view/options layout [
             ["Widget B" "5" "$42.00" "$210.00"]
             ["Gadget X" "23" "$12.50" "$287.50"]
         ]
-        append rpt 'FOOTER
-        append/only rpt [["Page %PAGE% of %PAGES%" "" "%TIME%"]]
+        append rpt [
+            'FOOTER
+            ["Page %PAGE% of %PAGES%" "" "%TIME%"]
+        ]
         emit-report %table-report.pdf
     ]
 

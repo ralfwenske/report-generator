@@ -253,7 +253,7 @@ context [
 
     ;--- Number formatting ---
 
-    format-number-value: func [val [number!] fmt [none! word! float!]][
+    format-number-value: func [val [number!] fmt [none! word! float!] /local s dpos decimals int-width total-width int-part result][
         case [
             none? fmt [to string! val]
             fmt = 'money [
@@ -263,7 +263,27 @@ context [
                     rejoin ["$" format-decimal val 2]
                 ]
             ]
-            float? fmt [format-decimal val to integer! ((fmt - to integer! fmt) * 10)]
+            float? fmt [
+                s: form fmt
+                dpos: find s #"."
+                either dpos [
+                    int-width: to integer! copy/part s dpos
+                    decimals: to integer! copy next dpos
+                ][
+                    int-width: to integer! s
+                    decimals: 0
+                ]
+                result: format-decimal val decimals
+                int-part: either find result #"." [
+                    copy/part result find result #"."
+                ][
+                    copy result
+                ]
+                if (length? int-part) < int-width [
+                    result: rejoin [copy/part "                    " (int-width - length? int-part) result]
+                ]
+                result
+            ]
             true [to string! val]
         ]
     ]
@@ -312,14 +332,15 @@ context [
     parse-columns: func [
         "Parse column header row: data followed by style block"
         cols [block!]
-        /local col-titles col-widths col-aligns col-formats col-bolds num-cols
-            cur-text cur-align cur-bold cur-format cur-width v s
+        /local col-titles col-widths col-aligns col-formats col-bolds col-blanks num-cols
+            cur-text cur-align cur-bold cur-format cur-width cur-blank v s
     ][
         col-titles: copy []
         col-widths: copy []
         col-aligns: copy []
         col-formats: copy []
         col-bolds: copy []
+        col-blanks: copy []
         num-cols: 0
         cur-text: none
 
@@ -331,21 +352,24 @@ context [
                     cur-bold: false
                     cur-format: none
                     cur-width: 80
+                    cur-blank: false
                     foreach s v [
                         case [
-                            s = '<     [cur-align: "L"]
-                            s = '^     [cur-align: "C"]
-                            s = '>     [cur-align: "R"]
-                            s = 'b     [cur-bold: true]
-                            s = 'money [cur-format: 'money]
-                            integer? s [cur-width: s]
-                            float? s   [cur-format: s]
+                            s = '<      [cur-align: "L"]
+                            s = '^      [cur-align: "C"]
+                            s = '>      [cur-align: "R"]
+                            s = 'b      [cur-bold: true]
+                            s = 'blank  [cur-blank: true]
+                            s = 'money  [cur-format: 'money]
+                            integer? s  [cur-width: s]
+                            float? s    [cur-format: s]
                         ]
                     ]
                     append col-widths cur-width
                     append col-aligns cur-align
                     append col-formats cur-format
                     append col-bolds cur-bold
+                    append col-blanks cur-blank
                     num-cols: num-cols + 1
                     cur-text: none
                 ]
@@ -358,7 +382,7 @@ context [
                 ]
             ]
         ]
-        reduce [col-titles col-widths col-aligns col-formats col-bolds num-cols]
+        reduce [col-titles col-widths col-aligns col-formats col-bolds col-blanks num-cols]
     ]
 
     eval-val: func [v /local val][
@@ -370,43 +394,55 @@ context [
     ]
 
     parse-row-segments: func [
-        "Parse a row: data elements followed by style blocks. Returns [styles text ...] pairs"
+        "Parse a row: data elements followed by style blocks. Returns [styles text ...] pairs. Floats in style blocks format preceding numbers."
         row [block!]
-        /local result cur-text cur-styles v s
+        /local result cur-text cur-styles v s fmt
     ][
         result: copy []
         cur-text: none
         cur-styles: copy []
+        fmt: none
 
         foreach v row [
             either block? v [
                 cur-styles: copy []
+                fmt: none
                 foreach s v [
                     case [
                         word? s     [append cur-styles s]
                         lit-word? s [append cur-styles to word! s]
+                        float? s    [fmt: s]
+                        integer? s  [fmt: to float! s]
                     ]
                 ]
                 if cur-text [
+                    either all [fmt number? cur-text][
+                        cur-text: format-number-value cur-text fmt
+                    ][
+                        if number? cur-text [cur-text: form cur-text]
+                    ]
                     append/only result cur-styles
                     append result cur-text
                     cur-text: none
                     cur-styles: copy []
+                    fmt: none
                 ]
             ][
                 if cur-text [
+                    either number? cur-text [cur-text: form cur-text][]
                     append/only result copy []
                     append result cur-text
                 ]
                 cur-text: case [
                     string? v  [v]
                     number? v  [v]
-                    word? v    [eval-val v]
+                    word? v    [either val: attempt [get v][either string? val [val][form val]][form v]]
                     true       [form v]
                 ]
             ]
         ]
         if cur-text [
+            if number? cur-text [cur-text: form cur-text]
             append/only result copy cur-styles
             append result cur-text
         ]
@@ -578,7 +614,7 @@ context [
         is-header [logic!] row-num [integer!]
         col-info [block!] row [block!]
         /local box-top text-y
-            ct cw ca cf cb nc ci col-x col-w col-text col-align col-format
+            ct cw ca cf cb cblank nc ci col-x col-w col-text col-align col-format
             raw-val text styles col-styles final-styles s
     ][
         box-top: y - rh
@@ -589,7 +625,8 @@ context [
         ca: col-info/3
         cf: col-info/4
         cb: col-info/5
-        nc: col-info/6
+        cblank: col-info/6
+        nc: col-info/7
 
         either is-header [
             emit-filled-rect out tl box-top tw rh 0.85
@@ -625,6 +662,7 @@ context [
 
                 text: case [
                     none? raw-val   [""]
+                    all [pick cblank ci number? raw-val raw-val = 0] [""]
                     string? raw-val [raw-val]
                     number? raw-val [either col-format [format-number-value raw-val col-format][form raw-val]]
                     true            [form raw-val]
@@ -665,10 +703,12 @@ context [
                 item = 'CONTENT [current: 'content]
                 item = 'FOOTER  [current: 'footer  footer: copy []]
                 true [
-                    case [
-                        current = 'header  [append/only header item]
-                        current = 'content [append/only content item]
-                        current = 'footer  [append/only footer item]
+                    if not none? item [
+                        case [
+                            current = 'header  [append/only header item]
+                            current = 'content [append/only content item]
+                            current = 'footer  [append/only footer item]
+                        ]
                     ]
                 ]
             ]
@@ -743,7 +783,7 @@ context [
                     ]
 
                     col-info: parse-columns table-columns
-                    num-cols: col-info/6
+                    num-cols: col-info/7
 
                     table-left: margin-left
                     table-width: 0

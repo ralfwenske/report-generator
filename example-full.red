@@ -18,33 +18,36 @@ append/only rpt [" " " " "%DATETIME%" ['b]]
 append rpt 'CONTENT
 
 ;--- Section 1: Text with styles ---
-append/only rpt ["Report Generator Demo" ['h1]]
-append/only rpt [""]
-append/only rpt ["This report demonstrates all features of the report-generator module." ['b]]
-append/only rpt [""]
-append/only rpt ["Italic text" ['i]]
-append/only rpt ["Underlined text" ['u]]
-append/only rpt ["Bold text" ['b]]
-append/only rpt ["Bold italic" ['b 'i]]
-append/only rpt ["Bold underline" ['b 'u]]
-append/only rpt ["Italic underline" ['i 'u]]
-append/only rpt ["Bold italic underline" ['b 'i 'u]]
-append/only rpt [""]
-append/only rpt ["Monospace" ['h2]]
-append/only rpt ["Monospaced text is ideal for aligned columns." ['m]]
-append/only rpt ["Bold mono" ['m 'b]]
-append/only rpt ["Italic mono" ['m 'i]]
-append/only rpt [""]
-append/only rpt ["Headings" ['h2]]
-append/only rpt ["Heading Level 1" ['h1]]
-append/only rpt ["Heading Level 2" ['h2]]
-append/only rpt ["Heading Level 3" ['h3]]
+append/only rpt [
+    ["Report Generator Demo" ['h1]]
+    [""]
+    ["This report demonstrates all features of the report-generator module." ['b]]
+    [""]
+    ["Italic text" ['i]]
+    ["Underlined text" ['u]]
+    ["Bold text" ['b]]
+    ["Bold italic" ['b 'i]]
+    ["Bold underline" ['b 'u]]
+    ["Italic underline" ['i 'u]]
+    ["Bold italic underline" ['b 'i 'u]]
+    [""]
+    ["Monospace" ['h2]]
+    ["Monospaced text is ideal for aligned columns." ['m]]
+    ["Bold mono" ['m 'b]]
+    ["Italic mono" ['m 'i]]
+    [""]
+    ["Headings" ['h2]]
+    ["Heading Level 1" ['h1]]
+    ["Heading Level 2" ['h2]]
+    ["Heading Level 3" ['h3]]
+]
 
 ;--- Section 2: Boxed table with alternating rows ---
-append/only rpt [""]
-append/only rpt ["Boxed Table with Alternating Rows" ['h2]]
-append/only rpt ["A table with 'box and 'alt modifiers, number formatting, and styled cells."]
-
+append/only rpt [
+    [""]
+    ["Boxed Table with Alternating Rows" ['h2]]
+    ["A table with 'box and 'alt modifiers, number formatting, and styled cells."]
+]
 append/only rpt reduce [
     'table 'box 'alt
     ["Product" ['< 180] "Qty" ['^ 60 5.4] "Price" ['> 80 'money] "Total" ['> 80 'money]]
@@ -56,10 +59,11 @@ append/only rpt reduce [
 ]
 
 ;--- Section 3: Plain table ---
-append/only rpt [""]
-append/only rpt ["Plain Table" ['h2]]
-append/only rpt ["A table without 'box or 'alt — just column separators."]
-
+append/only rpt [
+    [""]
+    ["Plain Table" ['h2]]
+    ["A table without 'box or 'alt — just column separators."]
+]
 append/only rpt reduce [
     'table
     ["Category" ['< 200] "Amount" ['> 100]]
@@ -70,10 +74,11 @@ append/only rpt reduce [
 ]
 
 ;--- Section 4: Center-aligned columns ---
-append/only rpt [""]
-append/only rpt ["Center-aligned Columns" ['h2]]
-append/only rpt ["Demonstrates ^ (center) alignment in column definitions."]
-
+append/only rpt [
+    [""]
+    ["Center-aligned Columns" ['h2]]
+    ["Demonstrates ^ (center) alignment in column definitions."]
+]
 append/only rpt reduce [
     'table 'alt
     ["SKU" ['^ 80] "Product Name" ['< 200] "Category" ['^ 120] "Price" ['> 80]]
@@ -86,10 +91,11 @@ append/only rpt reduce [
 ]
 
 ;--- Section 5: Styled table cells ---
-append/only rpt [""]
-append/only rpt ["Styled Table Cells" ['h2]]
-append/only rpt ["Style tags work inside table cells."]
-
+append/only rpt [
+    [""]
+    ["Styled Table Cells" ['h2]]
+    ["Style tags work inside table cells."]
+]
 append/only rpt reduce [
     'table 'box 'alt
     ["Item" ['< 160] "Status" ['^ 100] "Amount" ['> 100]]
@@ -100,10 +106,11 @@ append/only rpt reduce [
 ]
 
 ;--- Section 6: Mono table ---
-append/only rpt [""]
-append/only rpt ["Monospace Table" ['h2]]
-append/only rpt ["Using 'm for aligned mono columns." ['m]]
-
+append/only rpt [
+    [""]
+    ["Monospace Table" ['h2]]
+    ["Using 'm for aligned mono columns." ['m]]
+]
 append/only rpt reduce [
     'table 'box 'alt
     ["Name" ['< 150] "Value" ['> 80] "Code" ['^ 100]]
@@ -114,20 +121,27 @@ append/only rpt reduce [
 ]
 
 ;--- Section 7: Dynamic content ---
-append/only rpt [""]
-append/only rpt ["Dynamic Content" ['h2]]
-append/only rpt ["Generating lines with a loop:"]
+append/only rpt [
+    [""]
+    ["Dynamic Content" ['h2]]
+    ["Generating lines with a loop:"]
+]
 
+;repeat x 10 [
+;    i: i + 1
+;    append/only rpt reduce [rejoin ["Record #" i ": "] ['m '> 4.0] rejoin ["Product widget #" i " - Qty: " (i * 3) [4.2 '> ]]]
+;]
 repeat x 10 [
     i: i + 1
-    append/only rpt reduce [rejoin ["Record #" i ": "] ['b] rejoin ["Product widget #" i " - Qty: " (i * 3)]]
+    append/only rpt reduce ["Record #" i ['m 5.0] ": Product widget #" i ['b 6.3] " - Qty: " (i * 3) [4.2]]
 ]
 
 ;--- Section 8: Page break in table ---
-append/only rpt [""]
-append/only rpt ["Table with Page Break" ['h2]]
-append/only rpt ["A long table that breaks across pages using a ^L row."]
-
+append/only rpt [
+    [""]
+    ["Table with Page Break" ['h2]]
+    ["A long table that breaks across pages using a ^L row."]
+]
 append/only rpt reduce [
     'table 'alt
     ["ID" ['> 60] "Name" ['< 200] "Amount" ['> 100]]
@@ -140,26 +154,31 @@ append/only rpt reduce [
     ["16" "Item P" 1600.00] ["17" "Item Q" 1700.00] ["18" "Item R" 1800.00]
 ]
 
-append/only rpt [""]
-append/only rpt ["End of report." ['b]]
+append/only rpt [
+    [""]
+    ["End of report." ['b]]
+]
 
 ;--- Section 9: Mixed font sizes on one line ---
-append/only rpt [""]
-append/only rpt ["Mixed Font Sizes" ['h2]]
-append/only rpt ["Heading styles can be applied per-segment, mixed with regular text on the same line."]
-append/only rpt ["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
-append/only rpt [""]
-append/only rpt ["The line height adapts to the tallest segment."]
-append/only rpt ["Regular " [] "mono " ['m] "and " [] "bold italic" ['b 'i] " together."]
+append/only rpt [
+    [""]
+    ["Mixed Font Sizes" ['h2]]
+    ["Heading styles can be applied per-segment, mixed with regular text on the same line."]
+    ["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
+    [""]
+    ["The line height adapts to the tallest segment."]
+    ["Regular " [] "mono " ['m] "and " [] "bold italic" ['b 'i] " together."]
+]
 
 ;--- Section 10: Table with heading in a cell ---
-append/only rpt [""]
-append/only rpt ["Headings in Table Cells" ['h2]]
-append/only rpt ["Table rows expand to fit heading-sized text."]
-
+append/only rpt [
+    [""]
+    ["Headings in Table Cells" ['h2]]
+    ["Table rows expand to fit heading-sized text."]
+]
 append/only rpt reduce [
     'table 'box 'alt
-    ["Category" ['< 160] "Description" ['< 200] "Amount" ['> 100]]
+    ["Category" ['< 160] "Description" ['< 200] "Amount" ['> 100 'blank]]
     ["Revenue" ['h3] "Total quarterly income" 50000.00]
     ["Expenses" ['b] "Operating costs" 35000.00]
     ["Profit" ['h2] "Net result" ['b 'u] 15000.00]
