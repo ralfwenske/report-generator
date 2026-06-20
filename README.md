@@ -94,7 +94,7 @@ Multiple data+style pairs on one line:
 
 ### Line-wide styles
 
-When the first element of a line block is a block (not followed by data), it's a line-wide style. Segments without their own style block inherit the line-wide style:
+When the first element of a line block is a block (not followed by data), it's a line-wide style. Segments without their own style block inherit the line-wide style. Segments with their own style block **merge** with the line-wide style — inherited attributes are preserved:
 
 ```red
 [['b] "ACME Corp" [h1] "Quarterly Report" [] "Confidential"]
@@ -104,6 +104,11 @@ When the first element of a line block is a block (not followed by data), it's a
 ```red
 [['i] "ACME Corp" ['b 'h2] "%TIME%" "Page %PAGE% of %PAGES%"]
 ; ^line-wide italic  ^bold h2 for "ACME Corp"  ^italic (inherited)  ^italic (inherited)
+```
+
+```red
+[['m] "Record #" 1 ['b 5.0] ": Value " 42 ['b 6.3]]
+; ^line-wide mono  ^mono (inherited)  ^mono bold (merged)  ^mono (inherited)  ^mono bold (merged)
 ```
 
 ## Style attributes
@@ -162,6 +167,7 @@ Each column title is followed by a style block specifying alignment, width, and 
 | `'^` | Center next column |
 | `'>` | Right-align next column |
 | `'b` | Bold data cells in next column (header is always bold) |
+| `'blank` | Suppress zero values — show empty cell instead of `0` |
 | `'money` | Format numbers as money with thousands separator |
 | `5.4` | Format numbers with 4 decimal places |
 | `180` | Set column width in points (default: 80) |
@@ -189,6 +195,49 @@ Numbers in table cells are formatted automatically based on the column definitio
 - **`'money`** — formats as `$1'234.50` with thousands separator and 2 decimal places
 - **`5.4`** — formats with 4 decimal places
 - **No format** — numbers displayed as-is
+
+### Float formatting in style blocks
+
+A float in a style block formats the preceding number. The integer part specifies the minimum field width (padded with leading spaces), and the decimal part specifies the number of decimal places:
+
+```red
+["Amount: " 42.5678 ['b 2.0]]    ; → "42" (bold, 0 decimals, min width 2)
+["Value: " 42 ['m 6.3]]          ; → "   42.000" (mono, 3 decimals, min width 6)
+["Pi: " 3.14159 ['m 5.4]]        ; → "3.1415" (mono, 4 decimals, min width 5)
+```
+
+Works in content lines and table cells. If the preceding data is not a number, the float is ignored.
+
+## Columns layout
+
+Multi-column layout for short lines, like newspaper columns. Rows are distributed evenly across columns, filling left-to-right:
+
+```red
+['column 200 20
+    [['m] "Record #" 1 ['b 5.0]]
+    [['m] "Record #" 2 ['b 5.0]]
+    ...
+]
+```
+
+| Parameter | Meaning |
+|-----------|---------|
+| `'column` | Starts a column layout block |
+| `200` | Column width in points |
+| `20` | Gap between columns in points |
+
+The module calculates how many columns fit in the available page width, then distributes rows evenly across them. Page breaks are handled automatically — when rows overflow, they continue on the next page with the same column layout. When remaining rows fit on the current page, they are split evenly across all columns so content below can continue normally.
+
+## Conditional page breaks
+
+`["^L" N]` breaks to a new page only if fewer than N lines remain:
+
+```red
+["^L" 15]     ; break only if < 15 lines of space left
+"^L"          ; unconditional break (string, not block)
+```
+
+Useful for keeping sections together without forcing unnecessary breaks.
 
 ## Header and footer tokens
 
@@ -291,6 +340,7 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 | `emit-header-line` | Emits a single header/footer line with line-wide style support |
 | `emit-content-line` | Emits a single content line with line-wide style support |
 | `emit-table-row` | Emits a table row (header or data) with box alignment |
+| `merge-styles` | Merges line-wide styles into segment styles |
 | `parse-sections` | Splits flat content into header/content/footer by lit-word markers |
 | `parse-line` | Extracts line-wide style block and segments from a line block |
 | `parse-row-segments` | Parses data+style blocks into `[styles text ...]` pairs |
@@ -301,11 +351,14 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 | `row-height` | Returns effective table row height based on max segment font size |
 | `format-number-value` | Formats numbers as money or with decimal places |
 | `format-decimal` | Formats numbers with thousands separators |
+| `ceil-div` | Integer division rounding up |
 
 **Rendering pipeline:**
 
 1. `parse-sections` splits flat content into header/content/footer blocks
 2. Content is processed page by page, tracking `page-y` position
-3. Each page's PostScript is collected into a `pages` block
-4. Tokens are replaced per page, footers are emitted
-5. Final PS is assembled with DSC comments, converted to PDF
+3. Tables render with per-row height adaptation and seamless box connection
+4. Columns render with PS `gsave/translate/grestore` for horizontal layout
+5. Each page's PostScript is collected into a `pages` block
+6. Tokens are replaced per page, footers are emitted
+7. Final PS is assembled with DSC comments, converted to PDF
