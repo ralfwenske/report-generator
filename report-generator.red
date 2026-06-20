@@ -508,6 +508,10 @@ context [
 
     col-w: does [page-width - margin-left - margin-right]
 
+    ceil-div: func ["Integer division rounding up" a [integer!] b [integer!]][
+        to integer! (a + b - 1) / b
+    ]
+
     merge-styles: func [
         "Merge line-wide styles into segment styles. Segment styles take precedence."
         base [block!] "Line-wide styles (e.g. ['m])"
@@ -738,6 +742,10 @@ context [
             date-str time-str datetime-str new-page
             table-col-idx rows-start row-item boxed? alt?
             mods result sections hdr ctn ftr
+            col-col-w col-gap col-rows col-total col-num col-per-col
+            col-idx col-remaining col-avail col-rows-this-page
+            col-cols-needed col-rows-per-render col-render-idx
+            col-ci col-base col-ri col-r col-x col-emit-y
     ][
         sections: parse-sections content
         hdr: sections/1
@@ -851,17 +859,71 @@ context [
                 ][
                     either all [
                         not empty? item
-                        string? first item
-                        (first item) = "^L"
-                        (length? item) > 1
-                        number? item/2
+                        item/1 = 'column
+                        (length? item) >= 3
                     ][
-                        if (page-y - (item/2 * line-height)) < page-bottom [new-page]
+                        ;--- Column layout: ['column col-width gap-width line1 line2 ...] ---
+                        col-col-w: item/2
+                        col-gap: item/3
+                        col-rows: copy []
+                        ci: 4
+                        while [ci <= length? item][
+                            append/only col-rows pick item ci
+                            ci: ci + 1
+                        ]
+                        col-total: length? col-rows
+                        col-num: to integer! (page-width - margin-left - margin-right) / (col-col-w + col-gap)
+                        if col-num < 1 [col-num: 1]
+                        col-per-col: ceil-div col-total col-num
+                        col-idx: 1
+                        col-remaining: col-total
+                        while [col-idx <= col-total][
+                            ; how many rows fit on this page
+                            col-avail: to integer! (page-y - page-bottom) / line-height
+                            if col-avail < 1 [new-page col-avail: to integer! (page-y - page-bottom) / line-height]
+                            col-rows-this-page: col-avail - (col-avail // col-per-col)
+                            if col-rows-this-page < col-per-col [col-rows-this-page: col-avail]
+                            if col-rows-this-page > col-remaining [col-rows-this-page: col-remaining]
+                            ; actual columns needed for this page's rows
+                            col-cols-needed: ceil-div col-rows-this-page col-per-col
+                            if col-cols-needed > col-num [col-cols-needed: col-num]
+                            col-rows-per-render: ceil-div col-rows-this-page col-cols-needed
+                            ; render rows in column-major order
+                            col-render-idx: 0
+                            repeat col-ci col-cols-needed [
+                                col-x: margin-left + ((col-ci - 1) * (col-col-w + col-gap))
+                                append page-content rejoin ["gsave " (col-x - margin-left) " 0 translate" lf]
+                                col-base: col-idx + ((col-ci - 1) * col-rows-per-render)
+                                repeat col-ri col-rows-per-render [
+                                    col-r: col-base + col-ri - 1
+                                    if col-r <= col-total [
+                                        col-emit-y: page-y - ((col-ri - 1) * line-height)
+                                        emit-content-line page-content col-rows/:col-r col-emit-y
+                                        col-render-idx: col-render-idx + 1
+                                    ]
+                                ]
+                                append page-content rejoin ["grestore" lf]
+                            ]
+                            col-idx: col-idx + col-render-idx
+                            col-remaining: col-remaining - col-render-idx
+                            page-y: page-y - (col-rows-per-render * line-height)
+                            if col-remaining > 0 [new-page]
+                        ]
                     ][
-                        page-y: page-y - heading-gap item
-                        if (page-y - line-height) < page-bottom [new-page]
-                        emit-content-line page-content item page-y
-                        page-y: page-y - line-height
+                        either all [
+                            not empty? item
+                            string? first item
+                            (first item) = "^L"
+                            (length? item) > 1
+                            number? item/2
+                        ][
+                            if (page-y - (item/2 * line-height)) < page-bottom [new-page]
+                        ][
+                            page-y: page-y - heading-gap item
+                            if (page-y - line-height) < page-bottom [new-page]
+                            emit-content-line page-content item page-y
+                            page-y: page-y - line-height
+                        ]
                     ]
                 ]
             ][
