@@ -71,6 +71,7 @@ Each line is a block. The first element determines the type:
 
 - **Block** (first element is a block) — line-wide style, applies to all unstyled segments
 - **`'table`** (first element) — table definition
+- **`'column`** (first element) — multi-column layout
 - **Otherwise** — data elements followed by optional style blocks
 
 ### Data-then-style-block pattern
