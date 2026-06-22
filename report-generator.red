@@ -23,11 +23,18 @@ context [
     mono-italic-font: "/Courier-Oblique"
     mono-bold-italic-font: "/Courier-BoldOblique"
 
-    ps-escape: func [s [string!]][
-        replace/all s "\\" "\\\\"
-        replace/all s "("  "\\("
-        replace/all s ")"  "\\)"
-        s
+    ps-escape: func [s [string!] /local result ch bs][
+        result: copy ""
+        bs: to char! 92
+        foreach ch s [
+            case [
+                ch = bs    [append result bs append result bs]
+                ch = #"("  [append result bs append result #"("]
+                ch = #")"  [append result bs append result #")"]
+                true       [append result ch]
+            ]
+        ]
+        result
     ]
 
     emit-font: func [out [string!] font-name [string!]][
@@ -621,7 +628,7 @@ context [
     emit-table-row: func [
         "Emit a table row (header or data). box-top = y - rh."
         out [string!] y [integer!] rh [integer!]
-        tl [integer!] tw [integer!] boxed? [logic!]
+        tl [integer!] tw [integer!] boxed? [logic!] alt? [logic!]
         is-header [logic!] row-num [integer!]
         col-info [block!] row [block!]
         /local box-top text-y
@@ -642,7 +649,7 @@ context [
         either is-header [
             emit-filled-rect out tl box-top tw rh 0.85
         ][
-            if (row-num // 2) = 0 [
+            if all [alt? (row-num // 2) = 0] [
                 emit-filled-rect out tl box-top tw rh 0.95
             ]
         ]
@@ -824,7 +831,7 @@ context [
                     page-y: page-y - row-h
                     if (page-y - table-total-h - line-height) < page-bottom [new-page]
 
-                    emit-table-row page-content page-y row-h table-left table-width boxed? true 0 col-info []
+                    emit-table-row page-content page-y row-h table-left table-width boxed? alt? true 0 col-info []
                     page-y: page-y - row-h
 
                     row-num: 0
@@ -839,19 +846,19 @@ context [
                         ][
                             new-page
                             row-h: header-row-h
-                            emit-table-row page-content page-y row-h table-left table-width boxed? true 0 col-info []
+                            emit-table-row page-content page-y row-h table-left table-width boxed? alt? true 0 col-info []
                             page-y: page-y - row-h
                         ][
                             if (page-y - row-h) < page-bottom [
                                 new-page
                                 row-h: header-row-h
-                                emit-table-row page-content page-y row-h table-left table-width boxed? true 0 col-info []
+                                emit-table-row page-content page-y row-h table-left table-width boxed? alt? true 0 col-info []
                                 page-y: page-y - row-h
                                 row-h: row-height row-item
                             ]
 
                             row-num: row-num + 1
-                            emit-table-row page-content page-y row-h table-left table-width boxed? false row-num col-info row-item
+                            emit-table-row page-content page-y row-h table-left table-width boxed? alt? false row-num col-info row-item
                             page-y: page-y - row-h
                         ]
                     ]

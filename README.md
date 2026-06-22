@@ -2,7 +2,7 @@
 
 A Red module that generates multi-page A4 PDF reports with mixed text and tables.
 
-![image](reports/example-simple.png)
+![image](reports/PDF-Report.png)
 
 ## How it works
 
@@ -263,58 +263,17 @@ Header and footer lines support positional alignment: 1st segment is left-aligne
 
 ## Examples
 
-### Simple example
-
-See [`example-simple.red`](example-simple.red) — run with `red example-simple.red`:
-
-```red
-Red []
-
-do %report-generator.red
-
-widgetC: ["Widget C" "245" ['b] 8890.00]
-threethousand: 3000
-
-generate-report 
-    [   'HEADER
-        [['b] "ACME Corp" [h1] "Quarterly Report" [] "Confidential"]
-        [" " " " "%DATETIME%" ['b]]
-
-        'CONTENT
-        ["Sales Summary for " ['b] "Q1 2015" ['u]]
-        ["Q1 sales data for all product lines." ['u]]
-
-        ['table 'box 'alt
-            ["Product" ['< 180] "Qty" ['^ 60 5.4] "Total" ['> 80 'money]]
-            ["Widget A" 120 threethousand ['b]]
-            ["Widget B" "45" 1890.0]
-            widgetC
-            ["TOTALS" ['b] "" "$13'780.00"]
-        ]
-        ["End of report." ['u]]
-
-        'FOOTER
-        [['i] "ACME Corp" ['b 'h2] "%TIME%" "Page %PAGE% of %PAGES%"]
-    ]
-    %reports/example-simple.pdf
-```
-
 ### Full example
 
-See [`example-full.red`](example-full.red) — run with `red example-full.red`. Generates a multi-page PDF demonstrating all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, center-aligned columns, styled table cells, dynamic content, table page breaks, and mixed font sizes.
-
-### GUI test harness
-
-See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate individual demo PDFs. Run with `red-view report-generator-test.red`. Includes a Preview checkbox to open PDFs in the default viewer.
+See [`report-generator-test.red`](report-generator-test.red) — a GUI with a button to generate a comprehensive demo PDF. Run with `red-view report-generator-test.red`. Includes a Preview checkbox to open the PDF in the default viewer. Demonstrates all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, column layout with dynamic content, and mixed font sizes.
 
 ## File overview
 
 | File | Purpose |
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
-| `example-simple.red` | Simple example — run with `red example-simple.red` |
-| `example-full.red` | Full example with all features — run with `red example-full.red` |
-| `report-generator-test.red` | GUI test harness with individual demo buttons |
+| `report-generator-test.red` | GUI test harness — run with `red-view report-generator-test.red` |
+| `functions.txt` | Data file used by the test harness for dynamic column layout |
 | `reports/` | Output directory for generated PDFs (gitignored) |
 
 ## Architecture
