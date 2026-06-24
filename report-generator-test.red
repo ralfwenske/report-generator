@@ -4,6 +4,7 @@ Red [
 ]
 
 do %report-generator.red
+;do %report-generator-original.red
 what-functions: load %functions.txt
 ;[
 ;  ["%                   " "op!" {Returns what is left over when one value is divided by another.}]
@@ -42,7 +43,7 @@ what-columns: function [] [
             reduce [title ['h2] "  shown in dynamic columns" ['i]]
             []
         ]
-        kind-column: copy ['COLUMN 100 10 ]
+        kind-column: copy ['COLUMN 90 10 ]
         f: copy what-filter kind
         repeat ix (length? f) [
             append/only kind-column reduce [f/(ix)]
@@ -54,24 +55,11 @@ what-columns: function [] [
 ] ;what-columns
 
 
-emit-report: func [rpt
-    file-name [file!]
-    /local pdf
-][
-    pdf: rejoin [%reports/ file-name]
-    either preview/data [
-        generate-report/browser rpt pdf
-        wait 5
-        delete pdf
-    ][
-        generate-report rpt pdf
-    ]
-] ; emit-report
-
 std-header: func [title [string!]] [
     reduce [
         'HEADER
         reduce [['b] "ACME Corp" ['h1] (title) ['h2] "%DATE%"]
+        reduce ["Page %PAGE% of %PAGES%" "" "%TIME%"]
     ]
 ] ; std-header
 
@@ -89,6 +77,7 @@ std-footer: function [extra [string!]] [
 widgetC: ["Widget C" "245" ['b] 8890.00]
 threethousand: 3000
 total: 1890.0
+zero: 0 
 
 pdf-report: function [] [
 
@@ -96,35 +85,35 @@ pdf-report: function [] [
 
     append rpt [
         'CONTENT 
-    ["Sales Summary for " ['b] "Q1 2015" ['u]]
-    ["Q1 sales data for all product lines." ['u]]
-    ["a bold monofont here" ['m 'b]]
-    ["                   *" ['m 'u]]
-    [""]
-    ["Table with 'box 'alt" ['u 'h2]]
-    ['table 'box 'alt
-        ["Product" ['< 180] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
-        ["Widget A" 120 threethousand ['b] ]
-        ["Widget B" "45" total]
-        widgetC
-        ["TOTALS" ['b] "" "$13'780.00"]
+        ["Sales Summary for " ['b] "Q1 2015" ['u]]
+        ["Q1 sales data for all product lines. " ['u] zero ['b]]
+        ["a bold monofont here" ['m 'b]]
+        ["                   *" ['m 'u]]
+        [""]
+        ["Table with 'box 'alt" ['u 'h2]]
+        ['table 'box 'alt
+            ["Product" ['< 180] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
+            ["Widget A" 120 threethousand ['b] ]
+            ["Widget B" "45" total]
+            widgetC
+            ["TOTALS" ['b] "" "$13'780.00"]
+        ]
+        [""]
+        ["Table with 'box" ['u 'h2]]
+        ['table 'box
+            ["Product" ['< 150] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
+            ["Widget A" 120 threethousand ['b] ]
+            ["Widget B" "45" total]
+        ]
+        [""]
+        ["Table " ['u 'h2]]
+        ['table
+            ["Product" ['< 120] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
+            ["Widget A" 120 threethousand ['b] ]
+            ["Widget B" "45" total]
+        ]       
+        [""] 
     ]
-    [""]
-    ["Table with 'box" ['u 'h2]]
-    ['table 'box
-        ["Product" ['< 150] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
-        ["Widget A" 120 threethousand ['b] ]
-        ["Widget B" "45" total]
-    ]
-    [""]
-    ["Table " ['u 'h2]]
-    ['table
-        ["Product" ['< 120] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
-        ["Widget A" 120 threethousand ['b] ]
-        ["Widget B" "45" total]
-    ]       
-    [""] 
-]
     append/only rpt ["words-of system shown in columns " ['h2]]
     f-cols: copy ['COLUMN 100 10]
     foreach w words-of system [
@@ -152,15 +141,35 @@ pdf-report: function [] [
     rpt
 ] ; pdf-report
 
+emit-report: func [rpt
+    file-name [file!]
+    /local pdf
+][
+    pdf: rejoin [%reports/ file-name]
+    either preview/data [
+        generate-report/browser rpt pdf
+        wait 5
+        delete pdf
+    ][
+        generate-report rpt pdf
+    ]
+] ; emit-report
 
 view/options layout [
     title "PDF Generator Test"
     below
     text 180x20 "PDF Generator Test" bold white center
     preview: check "Preview" true
+    landscape: check "Landscape" false
 
     button "PDF Report" [
-        emit-report pdf-report %report.pdf
-        unview face
+        either landscape/data [
+                paper-format/landscape 'a4
+            emit-report pdf-report %report-landscape.pdf
+        ][
+            paper-format 'a4
+            emit-report pdf-report %report-portrait.pdf
+        ]
+        unview 
     ]
 ][size: 200x200]

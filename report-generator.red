@@ -1,7 +1,7 @@
 Red [
     Title: "Report Generator Module v4"
     Purpose: "Generate multi-page A4 PostScript reports with flat content DSL"
-    Exports: [generate-report]
+    Exports: [generate-report paper-format]
 ]
 
 context [
@@ -22,6 +22,38 @@ context [
     mono-bold-font: "/Courier-Bold"
     mono-italic-font: "/Courier-Oblique"
     mono-bold-italic-font: "/Courier-BoldOblique"
+
+    paper-sizes: [
+        a4     [595  842]
+        letter [612  792]
+        legal  [612 1008]
+        a3     [842 1190]
+        a5     [420  595]
+    ]
+
+    landscape?: false
+
+    set 'paper-format func [
+        "Set paper size by name. Returns none if unknown."
+        name [word!] "One of: a4 letter legal a3 a5"
+        /landscape "Swap width and height for horizontal orientation"
+        /local sz
+    ][
+        sz: select paper-sizes name
+        either sz [
+            landscape?: landscape
+            either landscape [
+                page-width: sz/2
+                page-height: sz/1
+            ][
+                page-width: sz/1
+                page-height: sz/2
+            ]
+        ][
+            print rejoin ["Unknown paper format: " name ". Valid: " mold words-of paper-sizes]
+            none
+        ]
+    ]
 
     ps-escape: func [s [string!] /local result ch bs][
         result: copy ""
@@ -563,6 +595,7 @@ context [
         page-num [integer!] total-pages [integer!]
         date-str [string!] time-str [string!] datetime-str [string!]
         /default-style def-styles [block!]
+        /skip-tokens "Don't replace tokens; deferred for later"
         /local parsed line-styles segments nsegs idx styles text align
     ][
         parsed: parse-line line-block
@@ -574,7 +607,9 @@ context [
                 styles: merge-styles line-styles pick segments ((idx - 1) * 2 + 1)
                 text: pick segments (idx * 2)
                 align: case [idx = 1 ["L"] idx = 2 ["C"] idx = 3 ["R"] true ["L"]]
-                text: replace-tokens text page-num total-pages date-str time-str datetime-str
+                unless skip-tokens [
+                    text: replace-tokens text page-num total-pages date-str time-str datetime-str
+                ]
                 either all [empty? styles default-style][
                     emit-styled-text out margin-left y text col-w align def-styles
                 ][
@@ -594,9 +629,9 @@ context [
         if none? hdr [return page-y]
         foreach line hdr [
             either block? line [
-                emit-header-line/default-style out page-y line 0 0 date-str time-str datetime-str ['b]
+                emit-header-line/skip-tokens/default-style out page-y line 0 0 date-str time-str datetime-str ['b]
             ][
-                emit-styled-text out margin-left page-y (replace-tokens line 0 0 date-str time-str datetime-str) col-w "L" ['b]
+                emit-styled-text out margin-left page-y line col-w "L" ['b]
             ]
             page-y: page-y - line-height
         ]
@@ -738,7 +773,7 @@ context [
     ;--- Main entry point ---
 
     set 'generate-report func [
-        "Generate a multi-page A4 report"
+        "Generate a multi-page report (default A4, use paper-format to change)"
         content [block!]        "Content block with 'HEADER 'CONTENT 'FOOTER sections"
         output [file!]          "Output PDF file path"
         /browser                "Generate PDF and open in default PDF viewer"
@@ -754,6 +789,7 @@ context [
             col-idx col-remaining col-avail col-rows-per-col
             col-cols-fit col-rendered col-ci col-r col-x col-emit-y
     ][
+    
         sections: parse-sections content
         hdr: sections/1
         ctn: sections/2
@@ -950,7 +986,13 @@ context [
         append out-ps lf
         append out-ps rejoin ["%%Pages: " total-pages]
         append out-ps lf
+        append out-ps rejoin ["%%DocumentMedia: Default " page-width " " page-height " 0 () ()"]
+        append out-ps lf
+        append out-ps rejoin ["%%BoundingBox: 0 0 " page-width " " page-height]
+        append out-ps lf
         append out-ps "%%EndComments"
+        append out-ps lf
+        append out-ps rejoin ["<< /PageSize [" page-width " " page-height "] >> setpagedevice"]
         append out-ps lf
 
         p: 0
@@ -992,7 +1034,9 @@ context [
             exit
         ]
 
-        if browser [browse pdf-file]
-        delete ps-file
+        if browser [
+            browse pdf-file
+            delete ps-file
+        ]
     ] ; generate-report
 ];context
