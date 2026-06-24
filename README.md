@@ -164,10 +164,10 @@ Each column title is followed by a style block specifying alignment, width, and 
 
 | Modifier | Meaning |
 |----------|---------|
-| `'<` | Left-align next column |
-| `'^` | Center next column |
-| `'>` | Right-align next column |
-| `'b` | Bold data cells in next column (header is always bold) |
+| `'<` | Left-align column |
+| `'^` | Center column |
+| `'>` | Right-align column |
+| `'b` | Bold data cells in column (header itself is always bold) |
 | `'blank` | Suppress zero values — show empty cell instead of `0` |
 | `'money` | Format numbers as money with thousands separator |
 | `5.4` | Format numbers with 4 decimal places |
