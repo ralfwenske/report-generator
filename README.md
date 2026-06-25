@@ -126,6 +126,10 @@ When the first element of a line block is a block (not followed by data), it's a
 | `h1` | Heading 1 (24pt bold) |
 | `h2` | Heading 2 (18pt bold) |
 | `h3` | Heading 3 (14pt bold) |
+| `'date` | Format preceding `date!` value as date only (e.g. `25-Jun-2026`) |
+| `'time` | Format preceding `date!` value as time only (e.g. `18:26`) |
+| `'datetime` | Format preceding `date!` value as date and time (e.g. `25-Jun-2026 18:26`) |
+| `'blank` | Suppress preceding value if it is the number `0` (show empty cell) |
 
 Attributes can be combined: `['b 'i 'u]` for bold italic underlined.
 
@@ -211,6 +215,19 @@ A float in a style block formats the preceding number. The integer part specifie
 ```
 
 Works in content lines and table cells. If the preceding data is not a number, the float is ignored.
+
+### Date, time, and blank formatting in style blocks
+
+Date values (`date!` type) can be formatted with `'date`, `'time`, or `'datetime` styles. The `'blank` style suppresses zero values:
+
+```red
+[now ['date]]                           ; → "25-Jun-2026"
+[now ['time]]                           ; → "18:26"
+[now ['datetime]]                       ; → "25-Jun-2026 18:26"
+["Value: " 0 ['blank] " end"]           ; → "Value:  end" (zero suppressed)
+```
+
+Works in content lines and table cells. In table columns, `'blank` can also be set at the column level. If the preceding data is not a `date!` value, the date style is ignored.
 
 ## Columns layout
 
@@ -315,6 +332,7 @@ The module is wrapped in a `context` to isolate all internal state. `generate-re
 | `heading-gap` | Returns extra spacing above a line with heading-sized segments |
 | `row-height` | Returns effective table row height based on max segment font size |
 | `format-number-value` | Formats numbers as money or with decimal places |
+| `format-date-value` | Formats date values as date, time, or datetime strings |
 | `format-decimal` | Formats numbers with thousands separators |
 | `ceil-div` | Integer division rounding up |
 | `is-page-break-row?` | Checks if a table row is a `^L` page break marker |

@@ -362,6 +362,24 @@ context [
         ]
     ]
 
+    format-date-value: function [
+        "Format date value as date, time, or datetime string"
+        val [date!] fmt [word!]
+    ][
+        case [
+            fmt = 'date [form val/date]
+            fmt = 'time [
+                t: form any [val/time 0:00]
+                copy/part t ((length? t) - 3)
+            ]
+            true [
+                d: form val/date
+                t: form any [val/time 0:00]
+                rejoin [d " " copy/part t ((length? t) - 3)]
+            ]
+        ]
+    ]
+
     ;--- Parsing ---
 
     parse-columns: function [
@@ -427,7 +445,7 @@ context [
     ]
 
     parse-row-segments: function [
-        "Parse a row: data elements followed by style blocks. Returns [styles text ...] pairs. Floats in style blocks format preceding numbers."
+        "Parse a row: data elements followed by style blocks. Returns [styles text ...] pairs. Floats in style blocks format preceding numbers. Numbers are kept as-is for column formatting."
         row [block!]
     ][
         result: copy []
@@ -448,10 +466,15 @@ context [
                     ]
                 ]
                 if cur-text [
-                    either all [fmt number? cur-text][
+                    if all [fmt number? cur-text][
                         cur-text: format-number-value cur-text fmt
-                    ][
-                        if number? cur-text [cur-text: form cur-text]
+                    ]
+                    if date? cur-text [
+                        case [
+                            find cur-styles 'date     [cur-text: format-date-value cur-text 'date]
+                            find cur-styles 'time     [cur-text: format-date-value cur-text 'time]
+                            find cur-styles 'datetime [cur-text: format-date-value cur-text 'datetime]
+                        ]
                     ]
                     append/only result cur-styles
                     append result cur-text
@@ -461,20 +484,27 @@ context [
                 ]
             ][
                 if cur-text [
-                    if number? cur-text [cur-text: form cur-text]
                     append/only result copy []
                     append result cur-text
                 ]
                 cur-text: case [
                     string? v  [v]
                     number? v  [v]
-                    word? v    [either val: attempt [get v][either string? val [val][form val]][form v]]
+                    word? v    [
+                        val: attempt [get v]
+                        case [
+                            none? val    [form v]
+                            string? val  [val]
+                            number? val  [val]
+                            date? val    [val]
+                            true         [form val]
+                        ]
+                    ]
                     true       [form v]
                 ]
             ]
         ]
         if cur-text [
-            if number? cur-text [cur-text: form cur-text]
             append/only result copy cur-styles
             append result cur-text
         ]
@@ -568,13 +598,16 @@ context [
         if nsegs > 0 [
             either nsegs = 1 [
                 styles: merge-styles line-styles segments/1
-                emit-styled-text out margin-left page-y segments/2 col-w "L" styles
+                text: segments/2
+                if any [number? text date? text] [text: form text]
+                emit-styled-text out margin-left page-y text col-w "L" styles
             ][
                 emit-text-start out margin-left page-y
                 i: 1
                 while [i <= length? segments][
                     styles: merge-styles line-styles pick segments i
                     text: pick segments (i + 1)
+                    if any [number? text date? text] [text: form text]
                     emit-styled-text/join out margin-left page-y text col-w "L" styles
                     i: i + 2
                 ]
@@ -598,6 +631,7 @@ context [
             repeat idx nsegs [
                 styles: merge-styles line-styles pick segments ((idx - 1) * 2 + 1)
                 text: pick segments (idx * 2)
+                if number? text [text: form text]
                 align: case [idx = 1 ["L"] idx = 2 ["C"] idx = 3 ["R"] true ["L"]]
                 unless skip-tokens [
                     text: replace-tokens text page-num total-pages date-str time-str datetime-str
@@ -702,13 +736,22 @@ context [
 
                 final-styles: copy []
                 if pick col-bolds col-i [append final-styles 'b]
-                foreach s styles [unless find final-styles s [append final-styles s]]
+                foreach s styles [unless any [find final-styles s  s = 'blank] [append final-styles s]]
 
                 text: case [
                     none? raw-val   [""]
                     all [pick col-blanks col-i number? raw-val raw-val = 0] [""]
+                    all [find styles 'blank number? raw-val raw-val = 0] [""]
                     string? raw-val [raw-val]
                     number? raw-val [either col-format [format-number-value raw-val col-format][form raw-val]]
+                    date? raw-val   [
+                        case [
+                            find styles 'date     [format-date-value raw-val 'date]
+                            find styles 'time     [format-date-value raw-val 'time]
+                            find styles 'datetime [format-date-value raw-val 'datetime]
+                            true                  [form raw-val]
+                        ]
+                    ]
                     true            [form raw-val]
                 ]
                 emit-styled-text out (col-x + cell-pad) text-y text (col-w - (cell-pad * 2)) col-align final-styles
