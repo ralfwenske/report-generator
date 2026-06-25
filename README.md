@@ -26,17 +26,20 @@ The module generates PostScript, converts it to PDF via `ps2pdf` (Ghostscript), 
 do %report-generator.red
 ```
 
-### Exported function
+### Exported functions
 
 ```red
 generate-report content %report.pdf
 generate-report/browser content %report.pdf   ; generate and open in default PDF viewer
+paper-format 'a4                              ; set paper size (default: a4)
+paper-format/landscape 'a4                    ; set paper size in landscape orientation
 ```
 
-| Argument | Type | Description |
-|----------|------|-------------|
-| `content` | `block!` | Flat block with `'HEADER`, `'CONTENT`, `'FOOTER` sections |
-| `output` | `file!` | Output PDF file path |
+| Function | Argument | Type | Description |
+|----------|----------|------|-------------|
+| `generate-report` | `content` | `block!` | Flat block with `'HEADER`, `'CONTENT`, `'FOOTER` sections |
+| | `output` | `file!` | Output PDF file path |
+| `paper-format` | `name` | `word!` | Paper size: `a4`, `letter`, `legal`, `a3`, `a5` |
 
 ## Content structure
 
@@ -254,7 +257,7 @@ Header and footer lines support positional alignment: 1st segment is left-aligne
 
 ## Page layout
 
-- A4 (595 x 842 pts)
+- Default: A4 (595 x 842 pts). Use `paper-format` to change: `a4`, `letter`, `legal`, `a3`, `a5`. Add `/landscape` for horizontal orientation.
 - 50pt margins on all sides
 - Font: Times-Roman 12pt, line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`'m` tag).
 - Line and row heights adapt to the largest font size in the line/row
@@ -266,7 +269,7 @@ Header and footer lines support positional alignment: 1st segment is left-aligne
 
 ### Full example
 
-See [`report-generator-test.red`](report-generator-test.red) — a GUI with a button to generate a comprehensive demo PDF. Run with `red-view report-generator-test.red`. Includes a Preview checkbox to open the PDF in the default viewer. Demonstrates all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, column layout with dynamic content, and mixed font sizes.
+See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate portrait and landscape demo PDFs. Run with `red-view report-generator-test.red`. Includes Preview and Landscape checkboxes. Demonstrates all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, column layout with dynamic content, and mixed font sizes.
 
 ## File overview
 
@@ -275,16 +278,18 @@ See [`report-generator-test.red`](report-generator-test.red) — a GUI with a bu
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
 | `report-generator-test.red` | GUI test harness — run with `red-view report-generator-test.red` |
 | `functions.txt` | Data file used by the test harness for dynamic column layout |
+| `verify.red` | Headless PS output verification script |
 | `reports/` | Output directory for generated PDFs (gitignored) |
 
 ## Architecture
 
-The module is wrapped in a `context` to isolate all internal state. Only `generate-report` is exported (via `set`).
+The module is wrapped in a `context` to isolate all internal state. `generate-report` and `paper-format` are exported (via `set`).
 
 **Internal helpers:**
 
 | Function | Purpose |
 |----------|---------|
+| `emit` | Appends a PostScript line with newline to output buffer |
 | `ps-escape` | Escapes `\`, `(`, `)` in PostScript strings |
 | `emit-font` | Emits a PostScript font selection command |
 | `emit-text` | Emits a left/center/right-aligned text drawing command |
@@ -312,6 +317,9 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 | `format-number-value` | Formats numbers as money or with decimal places |
 | `format-decimal` | Formats numbers with thousands separators |
 | `ceil-div` | Integer division rounding up |
+| `is-page-break-row?` | Checks if a table row is a `^L` page break marker |
+| `assemble-ps` | Builds the final PostScript document from page buffers |
+| `convert-to-pdf` | Calls `ps2pdf` with error handling |
 
 **Rendering pipeline:**
 
@@ -320,5 +328,5 @@ The module is wrapped in a `context` to isolate all internal state. Only `genera
 3. Tables render with per-row height adaptation and seamless box connection
 4. Columns render with PS `gsave/translate/grestore` for horizontal layout
 5. Each page's PostScript is collected into a `pages` block
-6. Tokens are replaced per page, footers are emitted
-7. Final PS is assembled with DSC comments, converted to PDF
+6. `assemble-ps` replaces tokens per page, emits footers, wraps in PS DSC comments
+7. `convert-to-pdf` writes PS and calls `ps2pdf` to produce the final PDF

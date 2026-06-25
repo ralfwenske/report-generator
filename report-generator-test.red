@@ -4,12 +4,8 @@ Red [
 ]
 
 do %report-generator.red
-;do %report-generator-original.red
 what-functions: load %functions.txt
-;[
-;  ["%                   " "op!" {Returns what is left over when one value is divided by another.}]
-;  ["*                   " "op!" "Returns the product of two values."]
-;]
+; structure: [["name" "type" {description}] ...]
 
 what-kinds: function [] [
     kinds: []
@@ -33,26 +29,24 @@ what-filter: function [filter [string!]] [
 
 what-columns: function [] [
     result: copy []
-    kind: first what-kinds
     foreach kind what-kinds [
         title: copy rejoin ["Red - " kind]
         append result reduce [
-            'CONTENT 
+            'CONTENT
             []
             ["^L" 12]
             reduce [title ['h2] "  shown in dynamic columns" ['i]]
             []
         ]
-        kind-column: copy ['COLUMN 90 10 ]
+        kind-column: copy ['COLUMN 90 10]
         f: copy what-filter kind
         repeat ix (length? f) [
             append/only kind-column reduce [f/(ix)]
         ]
         append/only result kind-column
     ]
-;    probe result
     result
-] ;what-columns
+] ; what-columns
 
 
 std-header: func [title [string!]] [
@@ -65,7 +59,7 @@ std-header: func [title [string!]] [
 
 std-footer: function [extra [string!]] [
     result: [
-        'FOOTER          
+        'FOOTER
         [['b] "Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]
     ]
     if extra <> "" [
@@ -77,14 +71,14 @@ std-footer: function [extra [string!]] [
 widgetC: ["Widget C" "245" ['b] 8890.00]
 threethousand: 3000
 total: 1890.0
-zero: 0 
+zero: 0
 
 pdf-report: function [] [
 
     rpt: copy std-header "Long Report Demo"
 
     append rpt [
-        'CONTENT 
+        'CONTENT
         ["Sales Summary for " ['b] "Q1 2015" ['u]]
         ["Q1 sales data for all product lines. " ['u] zero ['b]]
         ["a bold monofont here" ['m 'b]]
@@ -111,27 +105,20 @@ pdf-report: function [] [
             ["Product" ['< 120] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
             ["Widget A" 120 threethousand ['b] ]
             ["Widget B" "45" total]
-        ]       
-        [""] 
+        ]
+        [""]
     ]
     append/only rpt ["words-of system shown in columns " ['h2]]
     f-cols: copy ['COLUMN 100 10]
     foreach w words-of system [
         append/only f-cols reduce [mold w]
-    ] 
+    ]
     append/only rpt f-cols
     append rpt [""]
     append rpt ["(1) first paren"]
     append rpt ["2) second paren"]
     append rpt ["We start a new page (if needed"]
     append rpt ["^L" 6]
-
-    f-cols: copy ['COLUMN 100 10 ]
-    f: copy what-filter "routine!"
-    repeat ix (length? f) [
-        append/only f-cols reduce [f/(ix)]
-    ]
-
 
     append rpt [""]
 
@@ -141,14 +128,13 @@ pdf-report: function [] [
     rpt
 ] ; pdf-report
 
-emit-report: func [rpt
+emit-report: function [rpt
     file-name [file!]
-    /local pdf
 ][
     pdf: rejoin [%reports/ file-name]
     either preview/data [
         generate-report/browser rpt pdf
-        wait 5
+        wait 3
         delete pdf
     ][
         generate-report rpt pdf
@@ -164,12 +150,12 @@ view/options layout [
 
     button "PDF Report" [
         either landscape/data [
-                paper-format/landscape 'a4
+            paper-format/landscape 'a4
             emit-report pdf-report %report-landscape.pdf
         ][
             paper-format 'a4
             emit-report pdf-report %report-portrait.pdf
         ]
-        unview 
+        unview
     ]
 ][size: 200x200]

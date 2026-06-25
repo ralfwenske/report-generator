@@ -14,6 +14,12 @@ context [
     font-size: 12
     line-height: 15
     row-padding: 4
+    cell-pad: 3
+    underline-offset: 2
+    stroke-width: 0.5
+    header-gray: 0.85
+    alt-row-gray: 0.95
+    default-col-width: 80
     bold-font: "/Times-Bold"
     italic-font: "/Times-Italic"
     bold-italic-font: "/Times-BoldItalic"
@@ -55,7 +61,12 @@ context [
         ]
     ]
 
-    ps-escape: func [s [string!] /local result ch bs][
+    emit: func ["Append PS line with newline" out [string!] data [block!]][
+        append out rejoin data
+        append out lf
+    ]
+
+    ps-escape: func ["Escape parentheses and backslashes for PostScript" s [string!] /local result ch bs][
         result: copy ""
         bs: to char! 92
         foreach ch s [
@@ -69,12 +80,12 @@ context [
         result
     ]
 
-    emit-font: func [out [string!] font-name [string!]][
-        append out rejoin [font-name " findfont " font-size " scalefont setfont"]
-        append out lf
+    emit-font: func ["Emit PostScript font selection" out [string!] font-name [string!]][
+        emit out [font-name " findfont " font-size " scalefont setfont"]
     ]
 
     emit-text: func [
+        "Emit positioned text with optional center/right alignment"
         out [string!] x [integer!] y [integer!] text [string!]
         /center col-w-c [integer!] /right col-w-r [integer!]
     ][
@@ -88,7 +99,7 @@ context [
         append out rejoin [" show" lf "grestore" lf]
     ]
 
-    emit-text-join: func [out [string!] y [integer!] text [string!]][
+    emit-text-join: func ["Continue text from currentpoint (PS chaining)" out [string!] y [integer!] text [string!]][
         append out rejoin [
             "_jx _jy moveto"
             " (" ps-escape text ") show"
@@ -96,81 +107,77 @@ context [
         ]
     ]
 
-    emit-text-start: func [out [string!] x [integer!] y [integer!]][
+    emit-text-start: func ["Initialize PS chaining variables at position" out [string!] x [integer!] y [integer!]][
         append out rejoin ["/_jx " x " def /_jy " y " def" lf]
     ]
 
     emit-underline: func [
+        "Emit underline stroke for text at position"
         out [string!] x [integer!] y [integer!] text [string!]
         col-w [integer!] align [string!]
     ][
-        append out "gsave"
-        append out lf
-        append out "newpath"
-        append out lf
-        either align = "C" [
-            append out rejoin [
-                "(" ps-escape text ") stringwidth pop dup "
-                col-w " exch sub 2 div " x " add "
-                (y - 2) " moveto 0 rlineto stroke"
+        emit out ["gsave"]
+        emit out ["newpath"]
+        case [
+            align = "C" [
+                append out rejoin [
+                    "(" ps-escape text ") stringwidth pop dup "
+                    col-w " exch sub 2 div " x " add "
+                    (y - underline-offset) " moveto 0 rlineto stroke"
+                ]
             ]
-        ][either align = "R" [
-            append out rejoin [
-                "(" ps-escape text ") stringwidth pop dup "
-                col-w " exch sub " x " add 3 sub "
-                (y - 2) " moveto 0 rlineto stroke"
+            align = "R" [
+                append out rejoin [
+                    "(" ps-escape text ") stringwidth pop dup "
+                    col-w " exch sub " x " add " cell-pad " sub "
+                    (y - underline-offset) " moveto 0 rlineto stroke"
+                ]
             ]
-        ][
-            append out rejoin [
-                x " " (y - 2) " moveto "
-                "(" ps-escape text ") stringwidth pop 0 rlineto stroke"
+            true [
+                append out rejoin [
+                    x " " (y - underline-offset) " moveto "
+                    "(" ps-escape text ") stringwidth pop 0 rlineto stroke"
+                ]
             ]
-        ]]
+        ]
         append out lf
-        append out "grestore"
-        append out lf
+        emit out ["grestore"]
     ]
 
-    emit-rect: func [out [string!] x [integer!] y [integer!] w [integer!] h [integer!]][
-        append out rejoin ["gsave 0.5 setlinewidth newpath " x " " y " moveto " w " 0 rlineto 0 " h " rlineto " (0 - w) " 0 rlineto closepath stroke grestore"]
-        append out lf
+    emit-rect: func ["Emit rectangle stroke" out [string!] x [integer!] y [integer!] w [integer!] h [integer!]][
+        emit out ["gsave " stroke-width " setlinewidth newpath " x " " y " moveto " w " 0 rlineto 0 " h " rlineto " (0 - w) " 0 rlineto closepath stroke grestore"]
     ]
 
-    emit-vline: func [out [string!] x [integer!] y [integer!] h [integer!]][
-        append out rejoin ["gsave 0.5 setlinewidth newpath " x " " y " moveto 0 " h " rlineto stroke grestore"]
-        append out lf
+    emit-vline: func ["Emit vertical line stroke" out [string!] x [integer!] y [integer!] h [integer!]][
+        emit out ["gsave " stroke-width " setlinewidth newpath " x " " y " moveto 0 " h " rlineto stroke grestore"]
     ]
 
-    emit-filled-rect: func [out [string!] x [integer!] y [integer!] w [integer!] h [integer!] gray [float!]][
-        append out "gsave"
-        append out lf
-        append out rejoin [gray " setgray newpath " x " " y " moveto " w " 0 rlineto 0 " h " rlineto " (0 - w) " 0 rlineto closepath fill"]
-        append out lf
-        append out "grestore"
-        append out lf
+    emit-filled-rect: func ["Emit filled rectangle with gray level" out [string!] x [integer!] y [integer!] w [integer!] h [integer!] gray [float!]][
+        emit out ["gsave"]
+        emit out [gray " setgray newpath " x " " y " moveto " w " 0 rlineto 0 " h " rlineto " (0 - w) " 0 rlineto closepath fill"]
+        emit out ["grestore"]
     ]
 
     ;--- Style helpers ---
 
-    style-has: func [styles [block!] target [word!]][
+    style-has: func ["Check if style block contains target word" styles [block!] target [word!]][
         not none? find styles target
     ]
 
-    style-heading: func [styles [block!] /local s][
+    style-heading: func ["Return heading level (1-3) from styles, or 0" styles [block!] /local s][
         foreach s styles [
             if find [h1 h2 h3] s [return case [s = 'h1 [1] s = 'h2 [2] true [3]]]
         ]
         0
     ]
 
-    heading-size: func [hd [integer!]][
+    heading-size: func ["Font size for heading level (1=24, 2=18, 3=14)" hd [integer!]][
         case [hd = 1 [24] hd = 2 [18] hd = 3 [14] true [font-size]]
     ]
 
-    max-style-size: func [
+    max-style-size: function [
         "Largest font size from style blocks in a line/row"
         line-block [block!]
-        /local v s best hd sz
     ][
         best: font-size
         foreach v line-block [
@@ -205,7 +212,7 @@ context [
         either sz > font-size [sz + row-padding + 1][line-height + row-padding]
     ]
 
-    font-for-styles: func [styles [block!] /local b? i? m? hd][
+    font-for-styles: func ["Select font name for style combination" styles [block!] /local b? i? m? hd][
         b?: style-has styles 'b
         i?: style-has styles 'i
         m?: style-has styles 'm
@@ -213,10 +220,11 @@ context [
 
         either hd > 0 [
             case [
-                m? [either b? [mono-bold-font][mono-font]]
-                b? [bold-font]
-                i? [italic-font]
-                true [bold-font]
+                all [m? b?] [mono-bold-font]
+                m?          [mono-font]
+                b?          [bold-font]
+                i?          [italic-font]
+                true        [bold-font]
             ]
         ][
             case [
@@ -232,14 +240,14 @@ context [
         ]
     ]
 
-    select-style-font: func [out [string!] styles [block!] /local hd sz][
+    select-style-font: func ["Emit font selection for given styles" out [string!] styles [block!] /local hd sz][
         hd: style-heading styles
         sz: heading-size hd
-        append out rejoin [font-for-styles styles " findfont " sz " scalefont setfont"]
-        append out lf
+        emit out [font-for-styles styles " findfont " sz " scalefont setfont"]
     ]
 
     emit-styled-text: func [
+        "Emit text with style-aware font selection and alignment"
         out [string!] x [integer!] y [integer!] text [string!]
         col-w [integer!] align [string!] styles [block!]
         /join "Use PS chaining for left-aligned segments"
@@ -254,45 +262,33 @@ context [
             (style-heading styles) > 0
         ]
         either join [
-            either any-style? [
-                select-style-font out styles
-                append out rejoin ["/_ulx _jx def" lf]
-                emit-text-join out y text
-                if style-has styles 'u [
-                    append out rejoin [
-                        "gsave newpath"
-                        " _ulx " (y - 2) " moveto"
-                        " (" ps-escape text ") stringwidth pop 0 rlineto stroke grestore" lf
-                    ]
+            either any-style? [select-style-font out styles][emit-font out regular-font]
+            if any-style? [emit out ["/_ulx _jx def"]]
+            emit-text-join out y text
+            if all [any-style? style-has styles 'u] [
+                emit out [
+                    "gsave newpath"
+                    " _ulx " (y - underline-offset) " moveto"
+                    " (" ps-escape text ") stringwidth pop 0 rlineto stroke grestore"
                 ]
-            ][
-                emit-font out regular-font
-                emit-text-join out y text
             ]
         ][
-            either any-style? [
-                select-style-font out styles
-                case [
-                    align = "C" [emit-text/center out x y text col-w]
-                    align = "R" [emit-text/right out x y text col-w]
-                    true [emit-text out x y text]
-                ]
+            either any-style? [select-style-font out styles][emit-font out regular-font]
+            case [
+                align = "C" [emit-text/center out x y text col-w]
+                align = "R" [emit-text/right out x y text col-w]
+                true [emit-text out x y text]
+            ]
+            if any-style? [
                 if style-has styles 'u [emit-underline out x y text col-w align]
                 emit-font out regular-font
-            ][
-                emit-font out regular-font
-                case [
-                    align = "C" [emit-text/center out x y text col-w]
-                    align = "R" [emit-text/right out x y text col-w]
-                    true [emit-text out x y text]
-                ]
             ]
         ]
     ]
 
     ;--- Number formatting ---
 
-    format-number-value: func [val [number!] fmt [none! word! float!] /local s dpos decimals int-width total-width int-part result][
+    format-number-value: function ["Format number with optional money/decimal format" val [number!] fmt [none! word! float!]][
         case [
             none? fmt [to string! val]
             fmt = 'money [
@@ -327,9 +323,9 @@ context [
         ]
     ]
 
-    format-decimal: func [
+    format-decimal: function [
+        "Format number with fixed decimals and thousand separators"
         val [number!] decimals [integer!]
-        /local s ipart dpos dpad dec-part i n result ch neg?
     ][
         s: form val
         neg?: false
@@ -368,11 +364,9 @@ context [
 
     ;--- Parsing ---
 
-    parse-columns: func [
+    parse-columns: function [
         "Parse column header row: data followed by style block"
         cols [block!]
-        /local col-titles col-widths col-aligns col-formats col-bolds col-blanks num-cols
-            cur-text cur-align cur-bold cur-format cur-width cur-blank v s
     ][
         col-titles: copy []
         col-widths: copy []
@@ -390,7 +384,7 @@ context [
                     cur-align: "L"
                     cur-bold: false
                     cur-format: none
-                    cur-width: 80
+                    cur-width: default-col-width
                     cur-blank: false
                     foreach s v [
                         case [
@@ -424,7 +418,7 @@ context [
         reduce [col-titles col-widths col-aligns col-formats col-bolds col-blanks num-cols]
     ]
 
-    eval-val: func [v /local val][
+    eval-val: func ["Resolve word to its value, or return as-is" v /local val][
         case [
             word? v     [val: attempt [get v] either val [val][v]]
             get-word? v [val: attempt [get v] either val [val][v]]
@@ -432,10 +426,9 @@ context [
         ]
     ]
 
-    parse-row-segments: func [
+    parse-row-segments: function [
         "Parse a row: data elements followed by style blocks. Returns [styles text ...] pairs. Floats in style blocks format preceding numbers."
         row [block!]
-        /local result cur-text cur-styles v s fmt
     ][
         result: copy []
         cur-text: none
@@ -468,7 +461,7 @@ context [
                 ]
             ][
                 if cur-text [
-                    either number? cur-text [cur-text: form cur-text][]
+                    if number? cur-text [cur-text: form cur-text]
                     append/only result copy []
                     append result cur-text
                 ]
@@ -508,10 +501,9 @@ context [
 
     ;--- Table helpers ---
 
-    table-modifiers: func [
+    table-modifiers: function [
         "Scan table block for modifiers. Returns [boxed? alt? col-index]"
         item [block!]
-        /local idx v boxed? alt? col-idx found
     ][
         idx: 2
         boxed?: false
@@ -531,6 +523,7 @@ context [
     ]
 
     replace-tokens: func [
+        "Replace %PAGE%, %PAGES%, %DATE%, %TIME%, %DATETIME% tokens"
         text [string!] page-num [integer!] total-pages [integer!]
         date-str [string!] time-str [string!] datetime-str [string!]
     ][
@@ -564,9 +557,9 @@ context [
         ]
     ]
 
-    emit-content-line: func [
+    emit-content-line: function [
+        "Emit a content line with parsed styles and segments"
         out [string!] line-block [block!] page-y [integer!]
-        /local parsed line-styles segments nsegs i styles text
     ][
         parsed: parse-line line-block
         line-styles: parsed/1
@@ -589,14 +582,13 @@ context [
         ]
     ]
 
-    emit-header-line: func [
+    emit-header-line: function [
         "Emit a header/footer line with positional alignment (1st=L, 2nd=C, 3rd=R)"
         out [string!] y [integer!] line-block [block!]
         page-num [integer!] total-pages [integer!]
         date-str [string!] time-str [string!] datetime-str [string!]
         /default-style def-styles [block!]
         /skip-tokens "Don't replace tokens; deferred for later"
-        /local parsed line-styles segments nsegs idx styles text align
     ][
         parsed: parse-line line-block
         line-styles: parsed/1
@@ -622,6 +614,7 @@ context [
     ;--- Header / Footer emit ---
 
     emit-header: func [
+        "Emit header block at top of page, return updated page-y"
         out [string!] hdr [block! none!] page-y [integer!]
         date-str [string!] time-str [string!] datetime-str [string!]
         /local line
@@ -640,6 +633,7 @@ context [
     ]
 
     emit-footer: func [
+        "Emit footer block at bottom of page"
         out [string!] ftr [block! none!] page-num [integer!] total-pages [integer!]
         date-str [string!] time-str [string!] datetime-str [string!]
         /local ftr-y line
@@ -660,90 +654,86 @@ context [
 
     header-row-h: does [line-height + row-padding]
 
-    emit-table-row: func [
+    emit-table-row: function [
         "Emit a table row (header or data). box-top = y - rh."
         out [string!] y [integer!] rh [integer!]
         tl [integer!] tw [integer!] boxed? [logic!] alt? [logic!]
         is-header [logic!] row-num [integer!]
         col-info [block!] row [block!]
-        /local box-top text-y
-            ct cw ca cf cb cblank nc ci col-x col-w col-text col-align col-format
-            raw-val text styles col-styles final-styles s
     ][
         box-top: y - rh
         text-y: box-top + row-padding
 
-        ct: col-info/1
-        cw: col-info/2
-        ca: col-info/3
-        cf: col-info/4
-        cb: col-info/5
-        cblank: col-info/6
-        nc: col-info/7
+        col-titles:  col-info/1
+        col-widths:  col-info/2
+        col-aligns:  col-info/3
+        col-formats: col-info/4
+        col-bolds:   col-info/5
+        col-blanks:  col-info/6
+        num-cols:    col-info/7
 
         either is-header [
-            emit-filled-rect out tl box-top tw rh 0.85
+            emit-filled-rect out tl box-top tw rh header-gray
         ][
             if all [alt? (row-num // 2) = 0] [
-                emit-filled-rect out tl box-top tw rh 0.95
+                emit-filled-rect out tl box-top tw rh alt-row-gray
             ]
         ]
 
         col-styles: parse-row-segments row
 
         col-x: tl
-        ci: 1
-        while [ci <= nc][
-            col-w: pick cw ci
-            col-align: pick ca ci
-            col-format: pick cf ci
+        col-i: 1
+        while [col-i <= num-cols][
+            col-w: pick col-widths col-i
+            col-align: pick col-aligns col-i
+            col-format: pick col-formats col-i
 
             either is-header [
-                col-text: pick ct ci
-                emit-styled-text out (col-x + 3) text-y col-text (col-w - 6) col-align ['b]
+                col-text: pick col-titles col-i
+                emit-styled-text out (col-x + cell-pad) text-y col-text (col-w - (cell-pad * 2)) col-align ['b]
             ][
-                styles: either ci <= ((length? col-styles) / 2) [
-                    pick col-styles ((ci - 1) * 2 + 1)
+                styles: either col-i <= ((length? col-styles) / 2) [
+                    pick col-styles ((col-i - 1) * 2 + 1)
                 ][copy []]
-                raw-val: either ci <= ((length? col-styles) / 2) [
-                    pick col-styles (ci * 2)
+                raw-val: either col-i <= ((length? col-styles) / 2) [
+                    pick col-styles (col-i * 2)
                 ][none]
 
                 final-styles: copy []
-                if pick cb ci [append final-styles 'b]
+                if pick col-bolds col-i [append final-styles 'b]
                 foreach s styles [unless find final-styles s [append final-styles s]]
 
                 text: case [
                     none? raw-val   [""]
-                    all [pick cblank ci number? raw-val raw-val = 0] [""]
+                    all [pick col-blanks col-i number? raw-val raw-val = 0] [""]
                     string? raw-val [raw-val]
                     number? raw-val [either col-format [format-number-value raw-val col-format][form raw-val]]
                     true            [form raw-val]
                 ]
-                emit-styled-text out (col-x + 3) text-y text (col-w - 6) col-align final-styles
+                emit-styled-text out (col-x + cell-pad) text-y text (col-w - (cell-pad * 2)) col-align final-styles
             ]
             col-x: col-x + col-w
-            ci: ci + 1
+            col-i: col-i + 1
         ]
 
         if boxed? [emit-rect out tl box-top tw rh]
 
         col-x: tl
-        ci: 2
-        while [ci <= nc][
-            col-w: pick cw (ci - 1)
+        col-i: 2
+        while [col-i <= num-cols][
+            col-w: pick col-widths (col-i - 1)
             col-x: col-x + col-w
             emit-vline out col-x box-top rh
-            ci: ci + 1
+            col-i: col-i + 1
         ]
     ]
 
     ;--- Section parser ---
 
-    parse-sections: func [
+    parse-sections: function [
         "Parse flat content into [header content footer]. Sections are delimited by 'HEADER 'CONTENT 'FOOTER lit-words."
         block [block!]
-        /local header content footer current item
     ][
         header: none
         content: copy []
@@ -757,7 +747,7 @@ context [
                 item = 'FOOTER  [current: 'footer  footer: copy []]
                 true [
                     if not none? item [
-                        either word? item [item: eval-val item][]
+                        if word? item [item: eval-val item]
                         case [
                             current = 'header  [append/only header item]
                             current = 'content [append/only content item]
@@ -772,24 +762,76 @@ context [
 
     ;--- Main entry point ---
 
-    set 'generate-report func [
+    is-page-break-row?: func [
+        "Check if a table row is a page break marker (^L)"
+        row
+    ][
+        all [
+            block? row
+            not empty? row
+            string? first row
+            (first row) = "^L"
+        ]
+    ]
+
+    assemble-ps: function [
+        "Build PostScript document from page buffers"
+        pages [block!] total-pages [integer!]
+        ftr [block! none!]
+        date-str [string!] time-str [string!] datetime-str [string!]
+    ][
+        out-ps: rejoin ["%!PS-Adobe-3.0" lf]
+        emit out-ps ["%%Pages: " total-pages]
+        emit out-ps ["%%DocumentMedia: Default " page-width " " page-height " 0 () ()"]
+        emit out-ps ["%%BoundingBox: 0 0 " page-width " " page-height]
+        emit out-ps ["%%EndComments"]
+        emit out-ps ["<< /PageSize [" page-width " " page-height "] >> setpagedevice"]
+
+        p: 0
+        while [p < total-pages][
+            p: p + 1
+            page-ps: copy pick pages p
+            replace/all page-ps "%PAGE%" to string! p
+            replace/all page-ps "%PAGES%" to string! total-pages
+            replace/all page-ps "%DATE%" date-str
+            replace/all page-ps "%TIME%" time-str
+            replace/all page-ps "%DATETIME%" datetime-str
+            emit out-ps ["%%Page: " p " " p]
+            emit out-ps ["0 setgray 1 setlinewidth"]
+            append out-ps page-ps
+            emit-footer out-ps ftr p total-pages date-str time-str datetime-str
+            emit out-ps ["showpage"]
+        ]
+
+        emit out-ps ["%%EOF"]
+        out-ps
+    ]
+
+    convert-to-pdf: func [
+        "Convert PostScript file to PDF using ps2pdf. Returns true on success."
+        ps-file [file!] pdf-file [file!]
+        /local result
+    ][
+        result: call/wait rejoin ["ps2pdf " ps-file " " pdf-file]
+        if result <> 0 [
+            print rejoin [
+                "Error: ps2pdf failed (exit code " result ")." lf
+                "Ghostscript is required to convert PostScript to PDF." lf
+                "Install it with:" lf
+                "  Linux:   sudo apt install ghostscript" lf
+                "  macOS:   brew install ghostscript" lf
+                "  Windows: https://ghostscript.com/releases/gsdnld.html"
+            ]
+        ]
+        result = 0
+    ]
+
+    set 'generate-report function [
         "Generate a multi-page report (default A4, use paper-format to change)"
         content [block!]        "Content block with 'HEADER 'CONTENT 'FOOTER sections"
         output [file!]          "Output PDF file path"
         /browser                "Generate PDF and open in default PDF viewer"
-        /local usable-top usable-bottom page-bottom
-            pages page-num page-content page-y
-            item out-ps total-pages ps-file pdf-file p page-ps
-            col-info num-cols table-left table-width row-h
-            row-num table-total-h ci table-columns table-rows
-            date-str time-str datetime-str new-page
-            table-col-idx rows-start row-item boxed? alt?
-            mods result sections hdr ctn ftr
-            col-col-w col-gap col-rows col-total col-num
-            col-idx col-remaining col-avail col-rows-per-col
-            col-cols-fit col-rendered col-ci col-r col-x col-emit-y
     ][
-    
         sections: parse-sections content
         hdr: sections/1
         ctn: sections/2
@@ -841,7 +883,6 @@ context [
                     ]
 
                     col-info: parse-columns table-columns
-                    num-cols: col-info/7
 
                     table-left: margin-left
                     table-width: 0
@@ -852,12 +893,7 @@ context [
                     table-total-h: row-h
                     forall table-rows [
                         row-item: first table-rows
-                        either all [
-                            block? row-item
-                            not empty? row-item
-                            string? first row-item
-                            (first row-item) = "^L"
-                        ][
+                        either is-page-break-row? row-item [
                             table-total-h: table-total-h + row-h
                         ][
                             table-total-h: table-total-h + row-height row-item
@@ -874,12 +910,7 @@ context [
                     forall table-rows [
                         row-item: first table-rows
                         row-h: row-height row-item
-                        either all [
-                            block? row-item
-                            not empty? row-item
-                            string? first row-item
-                            (first row-item) = "^L"
-                        ][
+                        either is-page-break-row? row-item [
                             new-page
                             row-h: header-row-h
                             emit-table-row page-content page-y row-h table-left table-width boxed? alt? true 0 col-info []
@@ -936,7 +967,7 @@ context [
                             col-rendered: 0
                             repeat col-ci col-cols-fit [
                                 col-x: (col-ci - 1) * (col-col-w + col-gap)
-                                append page-content rejoin ["gsave " col-x " 0 translate" lf]
+                                emit page-content ["gsave " col-x " 0 translate"]
                                 repeat col-ri col-rows-per-col [
                                     col-r: col-idx + ((col-ci - 1) * col-rows-per-col) + col-ri - 1
                                     if col-r <= col-total [
@@ -945,7 +976,7 @@ context [
                                         col-rendered: col-rendered + 1
                                     ]
                                 ]
-                                append page-content rejoin ["grestore" lf]
+                                emit page-content ["grestore"]
                             ]
                             col-idx: col-idx + col-rendered
                             col-remaining: col-remaining - col-rendered
@@ -982,57 +1013,13 @@ context [
         append pages page-content
         total-pages: length? pages
 
-        out-ps: copy "%!PS-Adobe-3.0"
-        append out-ps lf
-        append out-ps rejoin ["%%Pages: " total-pages]
-        append out-ps lf
-        append out-ps rejoin ["%%DocumentMedia: Default " page-width " " page-height " 0 () ()"]
-        append out-ps lf
-        append out-ps rejoin ["%%BoundingBox: 0 0 " page-width " " page-height]
-        append out-ps lf
-        append out-ps "%%EndComments"
-        append out-ps lf
-        append out-ps rejoin ["<< /PageSize [" page-width " " page-height "] >> setpagedevice"]
-        append out-ps lf
-
-        p: 0
-        while [p < total-pages][
-            p: p + 1
-            page-ps: copy pick pages p
-            replace/all page-ps "%PAGE%" to string! p
-            replace/all page-ps "%PAGES%" to string! total-pages
-            replace/all page-ps "%DATE%" date-str
-            replace/all page-ps "%TIME%" time-str
-            replace/all page-ps "%DATETIME%" datetime-str
-            append out-ps rejoin ["%%Page: " p " " p]
-            append out-ps lf
-            append out-ps "0 setgray 1 setlinewidth"
-            append out-ps lf
-            append out-ps page-ps
-            emit-footer out-ps ftr p total-pages date-str time-str datetime-str
-            append out-ps "showpage"
-            append out-ps lf
-        ]
-
-        append out-ps "%%EOF"
-        append out-ps lf
+        out-ps: assemble-ps pages total-pages ftr date-str time-str datetime-str
 
         ps-file: to file! rejoin [copy/part to string! output ((length? to string! output) - 4) ".ps"]
         pdf-file: output
 
         write ps-file out-ps
-        result: call/wait rejoin ["ps2pdf " ps-file " " pdf-file]
-        if result <> 0 [
-            print rejoin [
-                "Error: ps2pdf failed (exit code " result ")." lf
-                "Ghostscript is required to convert PostScript to PDF." lf
-                "Install it with:" lf
-                "  Linux:   sudo apt install ghostscript" lf
-                "  macOS:   brew install ghostscript" lf
-                "  Windows: https://ghostscript.com/releases/gsdnld.html"
-            ]
-            exit
-        ]
+        unless convert-to-pdf ps-file pdf-file [exit]
 
         if browser [
             browse pdf-file
