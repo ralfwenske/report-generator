@@ -295,7 +295,6 @@ See [`report-generator-test.red`](report-generator-test.red) — a GUI with butt
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
 | `report-generator-test.red` | GUI test harness — run with `red-view report-generator-test.red` |
 | `functions.txt` | Data file used by the test harness for dynamic column layout |
-| `verify.red` | Headless PS output verification script |
 | `reports/` | Output directory for generated PDFs (gitignored) |
 
 ## Architecture
