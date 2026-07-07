@@ -32,10 +32,9 @@ what-columns: function [] [
     foreach kind what-kinds [
         title: copy rejoin ["Red - " kind]
         append result reduce [
-            'CONTENT
             []
-            ["^L" 12]
-            reduce [title ['h2] "  shown in dynamic columns" ['i]]
+            ["^L" 10]
+            reduce [title ['h2] "  shown in as many columns as fit (automatically)" ['i]]
             []
         ]
         kind-column: copy ['COLUMN 90 10]
@@ -54,12 +53,14 @@ std-header: func [title [string!]] [
         'HEADER
         reduce [['b] "ACME Corp" ['h1] (title) ['h2] "%DATE%"]
         reduce ["Page %PAGE% of %PAGES%" "" "%TIME%"]
+        [""]
     ]
 ] ; std-header
 
 std-footer: function [extra [string!]] [
     result: [
         'FOOTER
+        []
         [['b] "Confidential" "%DATE%" "Page %PAGE% of %PAGES%"]
     ]
     if extra <> "" [
@@ -100,6 +101,7 @@ pdf-report: function [] [
             ["Widget B" "45" total]
         ]
         [""]
+        ["^L" 6]
         ["Table " ['u 'h2]]
         ['table
             ["Product" ['< 120] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
@@ -110,17 +112,15 @@ pdf-report: function [] [
     ]
     append/only rpt ["words-of system shown in columns " ['h2]]
     f-cols: copy ['COLUMN 100 10]
-    foreach w words-of system [
+    foreach w sort words-of system [
         append/only f-cols reduce [mold w]
     ]
     append/only rpt f-cols
     append rpt [""]
     append rpt ["(1) first paren"]
     append rpt ["2) second paren"]
-    append rpt ["We start a new page (if needed"]
-    append rpt ["^L" 6]
-
-    append rpt [""]
+    append rpt ["We start a new page (if needed)"]
+    append rpt [{(each 'RED' word columns tests min 10 lines for page breaks)}]
 
     append rpt what-columns
 
