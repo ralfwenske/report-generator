@@ -1,7 +1,7 @@
 Red [
     Title: "Report Generator Module v4"
     Purpose: "Generate multi-page A4 PostScript reports with flat content DSL"
-    Exports: [generate-report paper-format]
+    Exports: [generate-report paper-format fontsize]
 ]
 
 context [
@@ -38,6 +38,11 @@ context [
     ]
 
     landscape?: false
+
+    set 'fontsize func ["Set font size in points" size [integer!]] [
+        font-size: size
+        line-height: font-size + 3
+    ]
 
     set 'paper-format func [
         "Set paper size by name. Returns none if unknown."
@@ -164,6 +169,11 @@ context [
         not none? find styles target
     ]
 
+    style-width: func ["Extract integer width from styles, or 0" styles [block!] /local s][
+        foreach s styles [if integer? s [return s]]
+        0
+    ]
+
     style-heading: func ["Return heading level (1-3) from styles, or 0" styles [block!] /local s][
         foreach s styles [
             if find [h1 h2 h3] s [return case [s = 'h1 [1] s = 'h2 [2] true [3]]]
@@ -246,12 +256,37 @@ context [
         emit out [font-for-styles styles " findfont " sz " scalefont setfont"]
     ]
 
+    pad-text: func [
+        "Pad text to fixed width according to alignment"
+        text [string!] width [integer!] align [string!]
+        /local diff left-pad right-pad
+    ][
+        if width <= 0 [return text]
+        diff: width - length? text
+        if diff <= 0 [return text]
+        case [
+            align = "R" [
+                insert/dup text " " diff
+            ]
+            align = "C" [
+                left-pad: to integer! diff / 2
+                right-pad: diff - left-pad
+                insert/dup text " " left-pad
+                append/dup text " " right-pad
+            ]
+            true [
+                append/dup text " " diff
+            ]
+        ]
+        text
+    ]
+
     emit-styled-text: func [
         "Emit text with style-aware font selection and alignment"
         out [string!] x [integer!] y [integer!] text [string!]
         col-w [integer!] align [string!] styles [block!]
         /join "Use PS chaining for left-aligned segments"
-        /local any-style?
+        /local any-style? pad-w
     ][
         if (length? text) = 0 [exit]
         any-style?: any [
@@ -262,6 +297,8 @@ context [
             (style-heading styles) > 0
         ]
         either join [
+            pad-w: style-width styles
+            if pad-w > 0 [text: pad-text copy text pad-w "L"]
             either any-style? [select-style-font out styles][emit-font out regular-font]
             if any-style? [emit out ["/_ulx _jx def"]]
             emit-text-join out y text
@@ -273,6 +310,8 @@ context [
                 ]
             ]
         ][
+            pad-w: style-width styles
+            if pad-w > 0 [text: pad-text copy text pad-w align]
             either any-style? [select-style-font out styles][emit-font out regular-font]
             case [
                 align = "C" [emit-text/center out x y text col-w]
@@ -896,7 +935,6 @@ context [
 
         page-y: usable-top
         page-y: emit-header page-content hdr page-y date-str time-str datetime-str
-        page-y: page-y - line-height
 
         new-page: does [
             append pages page-content
@@ -905,7 +943,6 @@ context [
             emit-font page-content regular-font
             page-y: usable-top
             page-y: emit-header page-content hdr page-y date-str time-str datetime-str
-            page-y: page-y - line-height
         ]
 
         foreach item ctn [
@@ -943,7 +980,6 @@ context [
                         ]
                     ]
 
-                    page-y: page-y - row-h
                     if (page-y - table-total-h - line-height) < page-bottom [new-page]
 
                     emit-table-row page-content page-y row-h table-left table-width boxed? alt? true 0 col-info []

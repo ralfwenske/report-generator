@@ -33,6 +33,7 @@ generate-report content %report.pdf
 generate-report/browser content %report.pdf   ; generate and open in default PDF viewer
 paper-format 'a4                              ; set paper size (default: a4)
 paper-format/landscape 'a4                    ; set paper size in landscape orientation
+fontsize 14                                   ; set font size in points (default: 12)
 ```
 
 | Function | Argument | Type | Description |
@@ -40,6 +41,7 @@ paper-format/landscape 'a4                    ; set paper size in landscape orie
 | `generate-report` | `content` | `block!` | Flat block with `'HEADER`, `'CONTENT`, `'FOOTER` sections |
 | | `output` | `file!` | Output PDF file path |
 | `paper-format` | `name` | `word!` | Paper size: `a4`, `letter`, `legal`, `a3`, `a5` |
+| `fontsize` | `size` | `integer!` | Font size in points (default: 12) |
 
 ## Content structure
 
@@ -130,6 +132,7 @@ When the first element of a line block is a block (not followed by data), it's a
 | `'time` | Format preceding `date!` value as time only (e.g. `18:26`) |
 | `'datetime` | Format preceding `date!` value as date and time (e.g. `25-Jun-2026 18:26`) |
 | `'blank` | Suppress preceding value if it is the number `0` (show empty cell) |
+| `15` (integer) | Pad preceding string to fixed width (points). Left-pad for right-align, right-pad for left-align, split-pad for center |
 
 Attributes can be combined: `['b 'i 'u]` for bold italic underlined.
 
@@ -229,6 +232,18 @@ Date values (`date!` type) can be formatted with `'date`, `'time`, or `'datetime
 
 Works in content lines and table cells. In table columns, `'blank` can also be set at the column level. If the preceding data is not a `date!` value, the date style is ignored.
 
+### String width padding
+
+An integer in a style block pads the preceding string to a fixed width (in points). The padding direction follows the text alignment:
+
+```red
+["Label:" ['b 80]]              ; "Label:" right-padded to 80pt (left-aligned)
+["Name:" ['b 80 '>]]           ; "Name:" left-padded to 80pt (right-aligned)
+["Title" ['b 200 '^]]          ; "Title" center-padded to 200pt
+```
+
+Works in content lines and table cells. If the preceding data is not a string, the width is ignored.
+
 ## Columns layout
 
 Multi-column layout for short lines, like newspaper columns. Rows are distributed evenly across columns, filling left-to-right:
@@ -276,7 +291,7 @@ Header and footer lines support positional alignment: 1st segment is left-aligne
 
 - Default: A4 (595 x 842 pts). Use `paper-format` to change: `a4`, `letter`, `legal`, `a3`, `a5`. Add `/landscape` for horizontal orientation.
 - 50pt margins on all sides
-- Font: Times-Roman 12pt, line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`'m` tag).
+- Font: Times-Roman 12pt (configurable via `fontsize`), line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`'m` tag).
 - Line and row heights adapt to the largest font size in the line/row
 - Table headers: always bold 12pt with gray background, fixed 19pt height
 - Table data rows: height adapts to largest segment font size
@@ -334,6 +349,8 @@ The module is wrapped in a `context` to isolate all internal state. `generate-re
 | `format-date-value` | Formats date values as date, time, or datetime strings |
 | `format-decimal` | Formats numbers with thousands separators |
 | `ceil-div` | Integer division rounding up |
+| `style-width` | Extract integer width from styles, or 0 |
+| `pad-text` | Pad text to fixed width according to alignment |
 | `is-page-break-row?` | Checks if a table row is a `^L` page break marker |
 | `assemble-ps` | Builds the final PostScript document from page buffers |
 | `convert-to-pdf` | Calls `ps2pdf` with error handling |
