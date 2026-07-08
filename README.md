@@ -132,7 +132,12 @@ When the first element of a line block is a block (not followed by data), it's a
 | `'time` | Format preceding `date!` value as time only (e.g. `18:26`) |
 | `'datetime` | Format preceding `date!` value as date and time (e.g. `25-Jun-2026 18:26`) |
 | `'blank` | Suppress preceding value if it is the number `0` (show empty cell) |
+| `'s1000` | Format preceding number with thousand separators (e.g. `1'234'567`) |
 | `15` (integer) | Pad preceding string to fixed width (points). Left-pad for right-align, right-pad for left-align, split-pad for center |
+| `255.0.0` (tuple) | Background color (RGB 0-255). 1st tuple = background |
+| `0.0.200` (tuple) | Font color (RGB 0-255). 2nd tuple = font color |
+
+Named colors (`red`, `yellow`, `blue`, `green`, `white`, `black`, etc.) work as tuples: `['b red yellow]` → red background, yellow text.
 
 Attributes can be combined: `['b 'i 'u]` for bold italic underlined.
 
@@ -141,6 +146,19 @@ Headings default to bold font. All style attributes — including `'m`, `'h1`, `
 ```red
 ["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
 ```
+
+### Colors
+
+Tuples set background and font colors. The 1st tuple is the background, the 2nd is the font color. Use Red's predefined color names or numeric tuples:
+
+```red
+["Alert" ['b red white]]              ; bold, red background, white text
+["Status" [0.128.0 white]]            ; green background, white text
+["Note" [yellow blue]]                ; yellow background, blue text
+["Colored text only" [255.0.0]]       ; red background only
+```
+
+Colors work in content lines and table cells. In table column definitions, colors are not applied (columns use fixed styling).
 
 ## Tables
 
@@ -180,6 +198,7 @@ Each column title is followed by a style block specifying alignment, width, and 
 | `'b` | Bold data cells in column (header itself is always bold) |
 | `'blank` | Suppress zero values — show empty cell instead of `0` |
 | `'money` | Format numbers as money with thousands separator |
+| `'s1000` | Format numbers with thousand separators only (no `$` or decimals) |
 | `5.4` | Format numbers with 4 decimal places |
 | `180` | Set column width in points (default: 80) |
 
@@ -204,6 +223,7 @@ Use a row where the first column is `"^L"` to break a table across pages. The ta
 Numbers in table cells are formatted automatically based on the column definition:
 
 - **`'money`** — formats as `$1'234.50` with thousands separator and 2 decimal places
+- **`'s1000`** — formats as `1'234` with thousands separator, no decimals
 - **`5.4`** — formats with 4 decimal places
 - **No format** — numbers displayed as-is
 
@@ -246,7 +266,11 @@ Works in content lines and table cells. If the preceding data is not a string, t
 
 ## Columns layout
 
-Multi-column layout for short lines, like newspaper columns. Rows are distributed evenly across columns, filling left-to-right:
+Multi-column layout for short lines, like newspaper columns. Rows are distributed evenly across columns, filling left-to-right.
+
+### Explicit columns
+
+Specify column width and gap in points:
 
 ```red
 ['column 200 20
@@ -261,6 +285,32 @@ Multi-column layout for short lines, like newspaper columns. Rows are distribute
 | `'column` | Starts a column layout block |
 | `200` | Column width in points |
 | `20` | Gap between columns in points |
+
+### Auto-width columns
+
+Omit width — the module measures content and calculates automatically. Three forms:
+
+```red
+; Auto-width, default 20pt gap
+['column
+    [['m] "short"]
+    [['m] "a much longer line"]
+    ...
+]
+
+; Auto-width, explicit gap
+['column * 15
+    [['m] "short"]
+    [['m] "a much longer line"]
+    ...
+]
+```
+
+| Form | Meaning |
+|------|---------|
+| `['column 200 15 ...]` | Explicit width (200pt) and gap (15pt) |
+| `['column * 15 ...]` | Auto-width from content, 15pt gap |
+| `['column ...]` | Auto-width from content, default 0pt gap |
 
 The module calculates how many columns fit in the available page width, then distributes rows evenly across them. Page breaks are handled automatically — when rows overflow, they continue on the next page with the same column layout. When remaining rows fit on the current page, they are split evenly across all columns so content below can continue normally.
 
@@ -301,7 +351,7 @@ Header and footer lines support positional alignment: 1st segment is left-aligne
 
 ### Full example
 
-See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate portrait and landscape demo PDFs. Run with `red-view report-generator-test.red`. Includes Preview and Landscape checkboxes. Demonstrates all features: text styles, headings, monospace, boxed/plain/alternating tables, number formatting, column layout with dynamic content, and mixed font sizes.
+See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate portrait and landscape demo PDFs. Run with `red-view report-generator-test.red`. Includes Preview and Landscape checkboxes. Demonstrates all features: text styles, headings, monospace, colored cells, boxed/plain/alternating tables, number formatting, auto-width column layout with dynamic content, and mixed font sizes.
 
 ## File overview
 
@@ -327,7 +377,7 @@ The module is wrapped in a `context` to isolate all internal state. `generate-re
 | `emit-text-join` | Emits left-aligned text using PS `currentpoint` chaining |
 | `emit-text-start` | Initializes PS variables for a joined line |
 | `emit-underline` | Draws an underline beneath text |
-| `emit-styled-text` | Selects font, emits aligned text with styles |
+| `emit-styled-text` | Selects font, emits aligned text with styles and colors |
 | `emit-rect` | Emits a stroked rectangle (0.5pt lines) |
 | `emit-filled-rect` | Emits a filled rectangle with gray fill |
 | `emit-vline` | Emits a thin vertical line (column separator) |
@@ -337,6 +387,10 @@ The module is wrapped in a `context` to isolate all internal state. `generate-re
 | `emit-content-line` | Emits a single content line with line-wide style support |
 | `emit-table-row` | Emits a table row (header or data) with box alignment |
 | `merge-styles` | Merges line-wide styles into segment styles |
+| `resolve-colors` | Resolves color words (e.g. `red`) to tuples in a style block |
+| `tuple-to-rgb` | Converts Red tuple (0-255) to PostScript RGB string (0.0-1.0) |
+| `style-bg-color` | Extracts first tuple from styles as background color |
+| `style-fg-color` | Extracts second tuple from styles as font color |
 | `parse-sections` | Splits flat content into header/content/footer by lit-word markers |
 | `parse-line` | Extracts line-wide style block and segments from a line block |
 | `parse-row-segments` | Parses data+style blocks into `[styles text ...]` pairs |
@@ -352,6 +406,8 @@ The module is wrapped in a `context` to isolate all internal state. `generate-re
 | `style-width` | Extract integer width from styles, or 0 |
 | `pad-text` | Pad text to fixed width according to alignment |
 | `is-page-break-row?` | Checks if a table row is a `^L` page break marker |
+| `char-est-width` | Estimated pixel width of a character at current font-size |
+| `measure-column-pixels` | Measures max pixel width across column lines using per-char estimation |
 | `assemble-ps` | Builds the final PostScript document from page buffers |
 | `convert-to-pdf` | Calls `ps2pdf` with error handling |
 

@@ -1,5 +1,5 @@
 Red [
-    Title: "Report Generator Module v4"
+    Title: "Report Generator Module v5"
     Purpose: "Generate multi-page A4 PostScript reports with flat content DSL"
     Exports: [generate-report paper-format fontsize]
 ]
@@ -163,6 +163,62 @@ context [
         emit out ["grestore"]
     ]
 
+    ;--- Color helpers ---
+
+    tuple-to-rgb: func [
+        "Convert Red tuple (0-255) to PostScript RGB string (0.0-1.0)"
+        t [tuple!]
+    ][
+        rejoin [
+            (to float! t/1 / 255.0) " "
+            (to float! t/2 / 255.0) " "
+            (to float! t/3 / 255.0)
+        ]
+    ]
+
+    style-bg-color: func [
+        "Extract first tuple from styles as background color, or none"
+        styles [block!]
+        /local s
+    ][
+        foreach s styles [if tuple? s [return s]]
+        none
+    ]
+
+    style-fg-color: func [
+        "Extract second tuple from styles as font color, or none"
+        styles [block!]
+        /local s count
+    ][
+        count: 0
+        foreach s styles [
+            if tuple? s [
+                count: count + 1
+                if count = 2 [return s]
+            ]
+        ]
+        none
+    ]
+
+    resolve-colors: func [
+        "Resolve color words (e.g. red) to tuples in a style block"
+        styles [block!]
+        /local result s val
+    ][
+        result: copy []
+        foreach s styles [
+            case [
+                word? s     [
+                    val: attempt [get s]
+                    either tuple? val [append result val][append result s]
+                ]
+                lit-word? s [append result to word! s]
+                true        [append result s]
+            ]
+        ]
+        result
+    ]
+
     ;--- Style helpers ---
 
     style-has: func ["Check if style block contains target word" styles [block!] target [word!]][
@@ -282,11 +338,11 @@ context [
     ]
 
     emit-styled-text: func [
-        "Emit text with style-aware font selection and alignment"
+        "Emit text with style-aware font selection, alignment, and colors"
         out [string!] x [integer!] y [integer!] text [string!]
         col-w [integer!] align [string!] styles [block!]
         /join "Use PS chaining for left-aligned segments"
-        /local any-style? pad-w
+        /local any-style? pad-w bg fg sz
     ][
         if (length? text) = 0 [exit]
         any-style?: any [
@@ -296,12 +352,26 @@ context [
             style-has styles 'm
             (style-heading styles) > 0
         ]
+        bg: style-bg-color styles
+        fg: style-fg-color styles
+        sz: heading-size style-heading styles
+
         either join [
             pad-w: style-width styles
             if pad-w > 0 [text: pad-text copy text pad-w "L"]
             either any-style? [select-style-font out styles][emit-font out regular-font]
+            if bg [
+                append out rejoin [
+                    "gsave " tuple-to-rgb bg " setrgbcolor"
+                    " _jx _jy 5 sub"
+                    " (" ps-escape text ") stringwidth pop"
+                    " " (sz + 4) " rectfill grestore" lf
+                ]
+            ]
+            if fg [emit out ["gsave " tuple-to-rgb fg " setrgbcolor"]]
             if any-style? [emit out ["/_ulx _jx def"]]
             emit-text-join out y text
+            if fg [emit out ["grestore"]]
             if all [any-style? style-has styles 'u] [
                 emit out [
                     "gsave newpath"
@@ -313,11 +383,21 @@ context [
             pad-w: style-width styles
             if pad-w > 0 [text: pad-text copy text pad-w align]
             either any-style? [select-style-font out styles][emit-font out regular-font]
+            if bg [
+                append out rejoin [
+                    "gsave " tuple-to-rgb bg " setrgbcolor"
+                    " " x " " (y - 5)
+                    " (" ps-escape text ") stringwidth pop"
+                    " " (sz + 4) " rectfill grestore" lf
+                ]
+            ]
+            if fg [emit out ["gsave " tuple-to-rgb fg " setrgbcolor"]]
             case [
                 align = "C" [emit-text/center out x y text col-w]
                 align = "R" [emit-text/right out x y text col-w]
                 true [emit-text out x y text]
             ]
+            if fg [emit out ["grestore"]]
             if any-style? [
                 if style-has styles 'u [emit-underline out x y text col-w align]
                 emit-font out regular-font
@@ -327,7 +407,7 @@ context [
 
     ;--- Number formatting ---
 
-    format-number-value: function ["Format number with optional money/decimal format" val [number!] fmt [none! word! float!]][
+    format-number-value: function ["Format number with optional money/decimal/1000 format" val [number!] fmt [none! word! float!]][
         case [
             none? fmt [to string! val]
             fmt = 'money [
@@ -336,6 +416,9 @@ context [
                 ][
                     rejoin ["$" format-decimal val 2]
                 ]
+            ]
+            fmt = 's1000 [
+                format-decimal val 0
             ]
             float? fmt [
                 s: form fmt
@@ -451,6 +534,7 @@ context [
                             s = 'b      [cur-bold: true]
                             s = 'blank  [cur-blank: true]
                             s = 'money  [cur-format: 'money]
+                            s = 's1000   [cur-format: 's1000]
                             integer? s  [cur-width: s]
                             float? s    [cur-format: s]
                         ]
@@ -484,7 +568,7 @@ context [
     ]
 
     parse-row-segments: function [
-        "Parse a row: data elements followed by style blocks. Returns [styles text ...] pairs. Floats in style blocks format preceding numbers. Numbers are kept as-is for column formatting."
+        "Parse a row: data elements followed by style blocks. Returns [styles text ...] pairs."
         row [block!]
     ][
         result: copy []
@@ -494,12 +578,10 @@ context [
 
         foreach v row [
             either block? v [
-                cur-styles: copy []
+                cur-styles: resolve-colors v
                 fmt: none
-                foreach s v [
+                foreach s cur-styles [
                     case [
-                        word? s     [append cur-styles s]
-                        lit-word? s [append cur-styles to word! s]
                         float? s    [fmt: s]
                         integer? s  [fmt: to float! s]
                     ]
@@ -507,6 +589,9 @@ context [
                 if cur-text [
                     if all [fmt number? cur-text][
                         cur-text: format-number-value cur-text fmt
+                    ]
+                    if all [find cur-styles 's1000 number? cur-text][
+                        cur-text: format-decimal cur-text 0
                     ]
                     if date? cur-text [
                         case [
@@ -551,7 +636,7 @@ context [
     ]
 
     parse-line: func [
-        "Parse a content line block. Returns [line-styles segments] where line-styles is the leading style block (or []) and segments is the parsed data+style pairs."
+        "Parse a content line block. Returns [line-styles segments]."
         line-block [block!]
         /local line-styles rest
     ][
@@ -559,7 +644,7 @@ context [
             not empty? line-block
             block? line-block/1
         ][
-            line-styles: line-block/1
+            line-styles: resolve-colors line-block/1
             rest: copy next line-block
         ][
             line-styles: copy []
@@ -775,14 +860,24 @@ context [
 
                 final-styles: copy []
                 if pick col-bolds col-i [append final-styles 'b]
-                foreach s styles [unless any [find final-styles s  s = 'blank] [append final-styles s]]
+                foreach s styles [unless any [find final-styles s  s = 'blank  s = 's1000] [append final-styles s]]
 
                 text: case [
                     none? raw-val   [""]
                     all [pick col-blanks col-i number? raw-val raw-val = 0] [""]
                     all [find styles 'blank number? raw-val raw-val = 0] [""]
                     string? raw-val [raw-val]
-                    number? raw-val [either col-format [format-number-value raw-val col-format][form raw-val]]
+                    number? raw-val [
+                        either col-format [
+                            format-number-value raw-val col-format
+                        ][
+                            either find styles 's1000 [
+                                format-decimal raw-val 0
+                            ][
+                                form raw-val
+                            ]
+                        ]
+                    ]
                     date? raw-val   [
                         case [
                             find styles 'date     [format-date-value raw-val 'date]
@@ -854,6 +949,62 @@ context [
             string? first row
             (first row) = "^L"
         ]
+    ]
+
+    char-est-width: func [
+        "Estimated pixel width of a character at current font-size"
+        ch [char!]
+    ][
+        case [
+            find "il1|!.,;:'-_" ch [font-size * 0.3]
+            find "mwMW@%&$#"    ch [font-size * 0.7]
+            true                [font-size * 0.5]
+        ]
+    ]
+
+    measure-column-pixels: function [
+        "Measure max pixel width across all column lines"
+        col-rows [block!]
+        /local mono? mx ln segs val-w si text s ch
+    ][
+        mono?: false
+        if all [not empty? col-rows block? col-rows/1 block? col-rows/1/1][
+            foreach s col-rows/1/1 [if s = 'm [mono?: true]]
+        ]
+        if not mono? [
+            if all [not empty? col-rows block? col-rows/1][
+                segs: parse-line col-rows/1
+                if all [segs/1 segs/1/1 = 'm] [mono?: true]
+            ]
+        ]
+        mx: 0
+        foreach ln col-rows [
+            val-w: 0
+            either block? ln [
+                segs: parse-line ln
+                si: 2
+                while [si <= length? segs/2][
+                    text: segs/2/:si
+                    s: either any [string? text number? text date? text][form text][mold text]
+                    either mono? [
+                        val-w: val-w + to integer! (length? s) * font-size * 0.60
+                    ][
+                        foreach ch s [val-w: val-w + char-est-width ch]
+                    ]
+                    si: si + 2
+                ]
+            ][
+                if string? ln [
+                    either mono? [
+                        val-w: to integer! (length? ln) * font-size * 0.60
+                    ][
+                        foreach ch ln [val-w: val-w + char-est-width ch]
+                    ]
+                ]
+            ]
+            if val-w > mx [mx: val-w]
+        ]
+        to integer! mx
     ]
 
     assemble-ps: function [
@@ -1013,16 +1164,40 @@ context [
                     either all [
                         not empty? item
                         item/1 = 'column
-                        (length? item) >= 3
                     ][
-                        ;--- Column layout: ['column col-width gap-width line1 line2 ...] ---
-                        col-col-w: item/2
-                        col-gap: item/3
-                        col-rows: copy []
-                        ci: 4
-                        while [ci <= length? item][
-                            append/only col-rows pick item ci
-                            ci: ci + 1
+                        ;--- Column layout ---
+                        either all [(length? item) >= 3 number? item/2 number? item/3][
+                            ; Explicit: ['column col-width gap-width line1 line2 ...]
+                            col-col-w: item/2
+                            col-gap: item/3
+                            col-rows: copy []
+                            ci: 4
+                            while [ci <= length? item][
+                                append/only col-rows pick item ci
+                                ci: ci + 1
+                            ]
+                        ][
+                            either all [(length? item) >= 3 item/2 = '* integer? item/3][
+                                ; Auto with gap: ['column * gap line1 line2 ...]
+                                col-gap: item/3
+                                col-rows: copy []
+                                ci: 4
+                                while [ci <= length? item][
+                                    append/only col-rows pick item ci
+                                    ci: ci + 1
+                                ]
+                            ][
+                                ; Auto: ['column line1 line2 ...]
+                                col-gap: 0
+                                col-rows: copy []
+                                ci: 2
+                                while [ci <= length? item][
+                                    append/only col-rows pick item ci
+                                    ci: ci + 1
+                                ]
+                            ]
+                            col-col-w: measure-column-pixels col-rows
+                            if col-gap < 3 [col-gap: 3]
                         ]
                         col-total: length? col-rows
                         col-num: to integer! (page-width - margin-left - margin-right) / (col-col-w + col-gap)
@@ -1030,19 +1205,15 @@ context [
                         col-idx: 1
                         col-remaining: col-total
                         while [col-remaining > 0][
-                            ; how many rows each column needs to show all remaining
                             col-rows-per-col: ceil-div col-remaining col-num
                             col-avail: to integer! (page-y - page-bottom) / line-height
                             if col-avail < 1 [new-page col-avail: to integer! (page-y - page-bottom) / line-height]
                             either col-rows-per-col <= col-avail [
-                                ; all remaining fits — distribute evenly
                                 col-cols-fit: col-num
                             ][
-                                ; won't fit — use as many rows as page allows
                                 col-rows-per-col: col-avail
                                 col-cols-fit: col-num
                             ]
-                            ; render in column-major order
                             col-rendered: 0
                             repeat col-ci col-cols-fit [
                                 col-x: (col-ci - 1) * (col-col-w + col-gap)

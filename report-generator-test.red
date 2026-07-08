@@ -1,5 +1,5 @@
 Red [
-    Title: "Report Generator Test (v4 DSL)"
+    Title: "Report Generator Test"
     Needs: 'View
 ]
 
@@ -37,7 +37,7 @@ what-columns: function [] [
             reduce [title ['h2] "  shown in as many columns as fit (automatically)" ['i]]
             []
         ]
-        kind-column: copy ['COLUMN 90 10]
+        kind-column: copy ['COLUMN * 0]
         f: copy what-filter kind
         repeat ix (length? f) [
             append/only kind-column reduce [f/(ix)]
@@ -51,7 +51,7 @@ what-columns: function [] [
 std-header: func [title [string!]] [
     reduce [
         'HEADER
-        reduce [['b] "ACME Corp" ['h1] (title) ['h2] "%DATE%"]
+        reduce [['b] "ACME Corp" ['h1 red] (title) ['h2] "%DATE%"]
         reduce ["Page %PAGE% of %PAGES%" "" "%TIME%"]
         [""]
     ]
@@ -87,11 +87,11 @@ pdf-report: function [] [
         [""]
         ["Table with 'box 'alt" ['u 'h2]]
         ['table 'box 'alt
-            ["Product" ['< 180] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money]]
-            ["Widget A" 120 threethousand ['b] ]
-            ["Widget B" "45" total]
+            ["Product" ['< 180] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money] "Status" ['^ 80]]
+            ["Widget A" 120 threethousand ['b] "OK" [0.128.0 white]]
+            ["Widget B" [80.150.200] "45" total "Check" [255.165.0 white]]
             widgetC
-            ["TOTALS" ['b] "" "$13'780.00"]
+            ["TOTALS" ['b] "" "$13'780.00" ""]
         ]
         [""]
         ["Table with 'box" ['u 'h2]]
@@ -111,7 +111,7 @@ pdf-report: function [] [
         [""]
     ]
     append/only rpt ["words-of system shown in columns " ['h2]]
-    f-cols: copy ['COLUMN 100 10]
+    f-cols: copy ['COLUMN * 10]
     foreach w sort words-of system [
         append/only f-cols reduce [mold w]
     ]
@@ -131,10 +131,11 @@ pdf-report: function [] [
 emit-report: function [rpt
     file-name [file!]
 ][
+    fontsize 14
     pdf: rejoin [%reports/ file-name]
     either preview/data [
         generate-report/browser rpt pdf
-        wait 3
+        wait 1
         delete pdf
     ][
         generate-report rpt pdf
@@ -157,5 +158,10 @@ view/options layout [
             emit-report pdf-report %report-portrait.pdf
         ]
         unview
+    ]
+    button "Dump Source" [
+        foreach item pdf-report [
+            probe item
+        ]
     ]
 ][size: 200x200]
