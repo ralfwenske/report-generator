@@ -599,6 +599,7 @@ context [
         cur-text: none
         cur-styles: copy []
         fmt: none
+        val: none
 
         foreach v row [
             either block? v [
@@ -1105,7 +1106,7 @@ context [
                 w: (data/(i + 7) * 256) + data/(i + 8)
                 return reduce [w h]
             ]
-            either all [marker >= 208 marker <= 219][
+            either all [marker >= 208 marker <= 215][
                 i: i + 2
             ][
                 if (i + 3) > length? data [break]
@@ -1490,27 +1491,42 @@ context [
                             page-y: page-y - (col-rows-per-col * line-height)
                             if col-remaining > 0 [new-page]
                         ]
-                    ][
-                        either all [
-                            not empty? item
-                            (length? item) = 3
-                            item/1 = 'IMAGE
-                            integer? item/2
-                            any [file? item/3 string? item/3]
                         ][
-                            ;--- Image: ['IMAGE display-width %file] ---
-                            img-display-w: item/2
-                            img-file: to file! item/3
-                            img-size: read-image-size img-file
-                            either img-size [
-                                img-display-h: to integer! img-display-w * img-size/2 / img-size/1
-                                if (page-y - img-display-h) < page-bottom [new-page]
-                                emit-image page-content margin-left page-y img-display-w img-display-h img-file
-                                page-y: page-y - img-display-h
+                            either all [
+                                not empty? item
+                                (length? item) = 3
+                                item/1 = 'IMAGE
+                                integer? item/2
+                                any [file? item/3 string? item/3]
                             ][
-                                print rejoin ["Warning: unsupported or unreadable image: " img-file]
-                            ]
-                        ][
+                                ;--- Image: ['IMAGE display-width %file] ---
+                                img-file: to file! item/3
+                                img-data: read/binary img-file
+                                img-dims: case [
+                                    all [(length? img-data) >= 11 img-data/1 = 255 img-data/2 = 216] [read-jpeg-size img-file]
+                                    all [(length? img-data) >= 24 img-data/1 = 137 img-data/2 = 80 img-data/3 = 78 img-data/4 = 71] [
+                                        reduce [
+                                            (img-data/17 * 16777216) + (img-data/18 * 65536) + (img-data/19 * 256) + img-data/20
+                                            (img-data/21 * 16777216) + (img-data/22 * 65536) + (img-data/23 * 256) + img-data/24
+                                        ]
+                                    ]
+                                    true [none]
+                                ]
+                                either img-dims [
+                                    img-display-w: item/2
+                                    img-display-h: to integer! img-display-w * img-dims/2 / img-dims/1
+                                    max-page-h: usable-top - page-bottom
+                                    if img-display-h > max-page-h [
+                                        img-display-w: to integer! img-display-w * max-page-h / img-display-h
+                                        img-display-h: max-page-h
+                                    ]
+                                    if (page-y - img-display-h) < page-bottom [new-page]
+                                    emit-image page-content margin-left page-y img-display-w img-display-h img-file
+                                    page-y: page-y - img-display-h
+                                ][
+                                    print rejoin ["Warning: unsupported or unreadable image: " img-file]
+                                ]
+                            ][
                             either all [
                                 not empty? item
                                 string? first item
