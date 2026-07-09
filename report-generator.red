@@ -1083,6 +1083,84 @@ context [
         result = 0
     ]
 
+    ;--- Image support ---
+
+    read-jpeg-size: function [
+        "Read JPEG image dimensions from header. Returns [width height] or none."
+        file [file!]
+        /local data i marker len w h
+    ][
+        data: read/binary file
+        if (length? data) < 11 [return none]
+        if any [data/1 <> 255 data/2 <> 216][return none]
+        i: 3
+        while [i <= ((length? data) - 9)][
+            if data/:i <> 255 [break]
+            marker: data/(i + 1)
+            if marker = 255 [i: i + 1 continue]
+            if marker = 218 [break]
+            if marker = 217 [break]
+            if any [marker = 192 marker = 194][
+                h: (data/(i + 5) * 256) + data/(i + 6)
+                w: (data/(i + 7) * 256) + data/(i + 8)
+                return reduce [w h]
+            ]
+            either all [marker >= 208 marker <= 219][
+                i: i + 2
+            ][
+                if (i + 3) > length? data [break]
+                len: (data/(i + 2) * 256) + data/(i + 3)
+                if len < 2 [break]
+                i: i + 2 + len
+            ]
+        ]
+        none
+    ]
+
+    binary-to-hex: function [
+        "Convert binary data to uppercase hex string"
+        data [binary!]
+        /local result hex-ch byte
+    ][
+        hex-ch: "0123456789ABCDEF"
+        result: make string! (length? data) * 2
+        foreach byte data [
+            append result pick hex-ch (byte / 16 + 1)
+            append result pick hex-ch (byte // 16 + 1)
+        ]
+        result
+    ]
+
+    emit-image: function [
+        "Emit PostScript code to render a JPEG image"
+        out [string!] x [integer!] y [integer!]
+        display-w [integer!] display-h [integer!]
+        file [file!]
+        /local sz iw ih data hex
+    ][
+        sz: read-jpeg-size file
+        unless sz [
+            print rejoin ["Warning: cannot read JPEG image " file]
+            return false
+        ]
+        iw: sz/1  ih: sz/2
+        data: read/binary file
+        hex: binary-to-hex data
+        append out rejoin [
+            "gsave" lf
+            x " " (y - display-h) " translate" lf
+            display-w " " display-h " scale" lf
+            "/ImgSrc currentfile /ASCIIHexDecode filter /DCTDecode filter def" lf
+            "/imgstr " iw " 3 mul string def" lf
+            iw " " ih " 8 [" iw " 0 0 -" ih " 0 " ih "]" lf
+            "{ImgSrc imgstr readstring pop}" lf
+            "false 3 colorimage" lf
+            hex lf
+            "grestore" lf
+        ]
+        true
+    ]
+
     set 'generate-report function [
         "Generate a multi-page report (default A4, use paper-format to change)"
         content [block!]        "Content block with 'HEADER 'CONTENT 'FOOTER sections"
@@ -1260,17 +1338,38 @@ context [
                     ][
                         either all [
                             not empty? item
-                            string? first item
-                            (first item) = "^L"
-                            (length? item) > 1
-                            number? item/2
+                            (length? item) = 3
+                            item/1 = 'IMAGE
+                            integer? item/2
+                            file? item/3
                         ][
-                            if (page-y - (item/2 * line-height)) < page-bottom [new-page]
+                            ;--- Image: ['IMAGE display-width %file.jpg] ---
+                            img-display-w: item/2
+                            img-file: item/3
+                            img-size: read-jpeg-size img-file
+                            either img-size [
+                                img-display-h: to integer! img-display-w * img-size/2 / img-size/1
+                                if (page-y - img-display-h) < page-bottom [new-page]
+                                emit-image page-content margin-left page-y img-display-w img-display-h img-file
+                                page-y: page-y - img-display-h
+                            ][
+                                print rejoin ["Warning: unsupported or unreadable image: " img-file]
+                            ]
                         ][
-                            page-y: page-y - heading-gap item
-                            if (page-y - line-height) < page-bottom [new-page]
-                            emit-content-line page-content item page-y
-                            page-y: page-y - line-height
+                            either all [
+                                not empty? item
+                                string? first item
+                                (first item) = "^L"
+                                (length? item) > 1
+                                number? item/2
+                            ][
+                                if (page-y - (item/2 * line-height)) < page-bottom [new-page]
+                            ][
+                                page-y: page-y - heading-gap item
+                                if (page-y - line-height) < page-bottom [new-page]
+                                emit-content-line page-content item page-y
+                                page-y: page-y - line-height
+                            ]
                         ]
                     ]
                 ]

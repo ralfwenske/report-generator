@@ -312,7 +312,17 @@ Omit width — the module measures content and calculates automatically. Three f
 | `['column * 15 ...]` | Auto-width from content, 15pt gap |
 | `['column ...]` | Auto-width from content, default 0pt gap |
 
-The module calculates how many columns fit in the available page width, then distributes rows evenly across them. Page breaks are handled automatically — when rows overflow, they continue on the next page with the same column layout. When remaining rows fit on the current page, they are split evenly across all columns so content below can continue normally.
+## Images
+
+JPEG images can be embedded in the content flow:
+
+```red
+['IMAGE 300 %photo.jpg]
+```
+
+The `300` is the display width in points. The height is calculated automatically from the aspect ratio. If the image doesn't fit on the current page, a page break is inserted.
+
+The JPEG data is hex-encoded and embedded in the PostScript output using the `DCTDecode` filter, then rendered via `colorimage`. No external file references — the PDF is self-contained.
 
 ## Conditional page breaks
 
@@ -408,6 +418,9 @@ The module is wrapped in a `context` to isolate all internal state. `generate-re
 | `is-page-break-row?` | Checks if a table row is a `^L` page break marker |
 | `char-est-width` | Estimated pixel width of a character at current font-size |
 | `measure-column-pixels` | Measures max pixel width across column lines using per-char estimation |
+| `read-jpeg-size` | Read JPEG dimensions from file header. Returns [width height] or none |
+| `binary-to-hex` | Convert binary data to uppercase hex string |
+| `emit-image` | Emit PostScript code to render a JPEG image |
 | `assemble-ps` | Builds the final PostScript document from page buffers |
 | `convert-to-pdf` | Calls `ps2pdf` with error handling |
 
