@@ -1070,7 +1070,7 @@ context [
         ps-file [file!] pdf-file [file!]
         /local result
     ][
-        result: call/wait rejoin ["ps2pdf " ps-file " " pdf-file]
+        result: call/wait rejoin ["ps2pdf -dNOSAFER " ps-file " " pdf-file]
         if result <> 0 [
             print rejoin [
                 "Error: ps2pdf failed (exit code " result ")." lf
@@ -1255,7 +1255,7 @@ context [
         out [string!] x [integer!] y [integer!]
         display-w [integer!] display-h [integer!]
         file [file!]
-        /local data fmt sz w h hex info ncomp img-op
+        /local data fmt w h hex info ncomp img-op abs-path
     ][
         data: read/binary file
         if (length? data) < 4 [
@@ -1278,17 +1278,18 @@ context [
                 return false
             ]
             w: sz/1  h: sz/2
-            hex: binary-to-hex data
+            abs-path: either #"/" = first to string! file [file][
+                to file! rejoin [what-dir file]
+            ]
             append out rejoin [
                 "gsave" lf
                 x " " (y - display-h) " translate" lf
                 display-w " " display-h " scale" lf
-                "/ImgSrc currentfile /ASCIIHexDecode filter /DCTDecode filter def" lf
+                "/ImgSrc (" ps-escape to string! abs-path ") (r) file /DCTDecode filter def" lf
                 "/imgstr " w " 3 mul string def" lf
                 w " " h " 8 [" w " 0 0 -" h " 0 " h "]" lf
                 "{ImgSrc imgstr readstring pop}" lf
                 "false 3 colorimage" lf
-                hex ">" lf
                 "grestore" lf
             ]
         ][
@@ -1304,13 +1305,10 @@ context [
                 "gsave" lf
                 x " " (y - display-h) " translate" lf
                 display-w " " display-h " scale" lf
-                "/ImgSrc currentfile /ASCIIHexDecode filter def" lf
-                "/imgstr " w " " ncomp " mul string def" lf
-                w " " h " 8 [" w " 0 0 -" h " 0 " h "]" lf
-                "{ImgSrc imgstr readstring pop}" lf
-                either ncomp = 1 [""][rejoin ["false " ncomp " "]]
-                img-op lf
-                hex ">" lf
+                "/ImgData <" hex "> def" lf
+                w " " h " 8 [" w " 0 0 -" h " 0 " h "] ImgData"
+                either ncomp = 1 [""][" false " ncomp]
+                " " img-op lf
                 "grestore" lf
             ]
         ]
