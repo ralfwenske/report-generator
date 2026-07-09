@@ -6,6 +6,8 @@ unless value? 'report-generator [
     do load %report-generator.red
 ]
 
+report-dir: to-file rejoin [get-current-dir %reports/] 
+
 title: "Basic Demo"
 widget-C:  [[red] "Widget B" [green] "-45" [red] total [red] "Check" [255.165.0 white]]
 get-items: func [res [block!]] [
@@ -34,13 +36,13 @@ append rpt reduce [
         widget-C
         ["TOTALS" ['b] "" "$13'780.00" ""]
     ]
+    'IMAGE 300 rejoin [report-dir %PDF-Report.png]
     ["and here a columns demo" ['u 'h2]]
     get-items ['COLUMN]
     'FOOTER
     []
     [['b] " Confidential " ['h3 blue white] "%DATE%" "Page %PAGE% of %PAGES%"]
 ]
-report-dir: to-file rejoin [get-current-dir %reports/] 
 generate-report/browser rpt rejoin [report-dir %basic-demo.pdf]
 wait 1
 delete rejoin [report-dir %basic-demo.pdf]

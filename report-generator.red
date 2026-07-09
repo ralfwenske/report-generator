@@ -1117,6 +1117,124 @@ context [
         none
     ]
 
+    read-png-pixels: function [
+        "Read PNG, decompress, unfilter. Returns [width height ncomp pixel-data] or none."
+        file [file!]
+        /local data w h bd ct bpp pos chunk-len chunk-type idat-data
+               raw row-len filter-val prev-row curr-row x
+               raw-val a b c p pa pb pc pred val
+               ncomp rgb i
+    ][
+        data: read/binary file
+        if (length? data) < 33 [return none]
+        unless all [data/1 = 137 data/2 = 80 data/3 = 78 data/4 = 71][return none]
+        w: (data/17 * 16777216) + (data/18 * 65536) + (data/19 * 256) + data/20
+        h: (data/21 * 16777216) + (data/22 * 65536) + (data/23 * 256) + data/24
+        bd: data/25
+        ct: data/26
+        if bd <> 8 [print "Warning: only 8-bit PNG supported" return none]
+        if data/29 <> 0 [print "Warning: interlaced PNG not supported" return none]
+        bpp: case [
+            ct = 0 [1]  ct = 2 [3]  ct = 3 [1]
+            ct = 4 [2]  ct = 6 [4]  true [return none]
+        ]
+        idat-data: copy #{}
+        pos: 34
+        while [pos <= ((length? data) - 12)][
+            chunk-len: (data/pos * 16777216) + (data/(pos + 1) * 65536) + (data/(pos + 2) * 256) + data/(pos + 3)
+            chunk-type: to string! copy/part at data (pos + 4) 4
+            if chunk-type = "IDAT" [
+                append idat-data copy/part at data (pos + 8) chunk-len
+            ]
+            if chunk-type = "IEND" [break]
+            pos: pos + chunk-len + 12
+        ]
+        if empty? idat-data [return none]
+        raw: attempt [decompress idat-data]
+        unless raw [return none]
+        row-len: w * bpp
+        result: make binary! row-len * h
+        prev-row: make binary! row-len
+        insert/dup prev-row #{00} row-len
+        i: 1
+        repeat y h [
+            filter-val: raw/:i
+            i: i + 1
+            curr-row: make binary! row-len
+            repeat x row-len [
+                raw-val: raw/:i
+                i: i + 1
+                a: either x > bpp [pick curr-row (x - bpp)][0]
+                b: pick prev-row x
+                c: either x > bpp [pick prev-row (x - bpp)][0]
+                val: case [
+                    filter-val = 0 [raw-val]
+                    filter-val = 1 [raw-val + a]
+                    filter-val = 2 [raw-val + b]
+                    filter-val = 3 [to integer! raw-val + ((a + b) / 2)]
+                    filter-val = 4 [
+                        p: a + b - c
+                        pa: absolute (p - a)
+                        pb: absolute (p - b)
+                        pc: absolute (p - c)
+                        pred: case [
+                            all [pa <= pb pa <= pc] [a]
+                            pb <= pc [b]
+                            true [c]
+                        ]
+                        raw-val + pred
+                    ]
+                    true [raw-val]
+                ]
+                append curr-row val and 255
+            ]
+            append result curr-row
+            prev-row: copy curr-row
+        ]
+        ncomp: either any [ct = 2 ct = 6][3][1]
+        either ct = 6 [
+            rgb: make binary! w * h * 3
+            i: 1
+            while [i <= length? result][
+                append rgb pick result i
+                append rgb pick result (i + 1)
+                append rgb pick result (i + 2)
+                i: i + 4
+            ]
+            reduce [w h 3 rgb]
+        ][
+            either ct = 4 [
+                rgb: make binary! w * h
+                i: 1
+                while [i <= length? result][
+                    append rgb pick result i
+                    i: i + 2
+                ]
+                reduce [w h 1 rgb]
+            ][
+                reduce [w h ncomp result]
+            ]
+        ]
+    ]
+
+    read-image-size: function [
+        "Read JPEG or PNG image dimensions. Returns [width height] or none."
+        file [file!]
+        /local data
+    ][
+        data: read/binary file
+        if (length? data) < 8 [return none]
+        if all [data/1 = 255 data/2 = 216][return read-jpeg-size file]
+        if all [data/1 = 137 data/2 = 80 data/3 = 78 data/4 = 71][
+            if (length? data) < 24 [return none]
+            return reduce [
+                (data/17 * 16777216) + (data/18 * 65536) + (data/19 * 256) + data/20
+                (data/21 * 16777216) + (data/22 * 65536) + (data/23 * 256) + data/24
+            ]
+        ]
+        none
+    ]
+
     binary-to-hex: function [
         "Convert binary data to uppercase hex string"
         data [binary!]
@@ -1132,31 +1250,68 @@ context [
     ]
 
     emit-image: function [
-        "Emit PostScript code to render a JPEG image"
+        "Emit PostScript code to render a JPEG or PNG image"
         out [string!] x [integer!] y [integer!]
         display-w [integer!] display-h [integer!]
         file [file!]
-        /local sz iw ih data hex
+        /local data fmt sz w h hex info ncomp img-op
     ][
-        sz: read-jpeg-size file
-        unless sz [
-            print rejoin ["Warning: cannot read JPEG image " file]
+        data: read/binary file
+        if (length? data) < 4 [
+            print rejoin ["Warning: cannot read image " file]
             return false
         ]
-        iw: sz/1  ih: sz/2
-        data: read/binary file
-        hex: binary-to-hex data
-        append out rejoin [
-            "gsave" lf
-            x " " (y - display-h) " translate" lf
-            display-w " " display-h " scale" lf
-            "/ImgSrc currentfile /ASCIIHexDecode filter /DCTDecode filter def" lf
-            "/imgstr " iw " 3 mul string def" lf
-            iw " " ih " 8 [" iw " 0 0 -" ih " 0 " ih "]" lf
-            "{ImgSrc imgstr readstring pop}" lf
-            "false 3 colorimage" lf
-            hex lf
-            "grestore" lf
+        fmt: case [
+            all [data/1 = 255 data/2 = 216] ['jpeg]
+            all [data/1 = 137 data/2 = 80 data/3 = 78 data/4 = 71] ['png]
+            true [none]
+        ]
+        unless fmt [
+            print rejoin ["Warning: unsupported image format " file]
+            return false
+        ]
+        either fmt = 'jpeg [
+            sz: read-jpeg-size file
+            unless sz [
+                print rejoin ["Warning: cannot read JPEG " file]
+                return false
+            ]
+            w: sz/1  h: sz/2
+            hex: binary-to-hex data
+            append out rejoin [
+                "gsave" lf
+                x " " (y - display-h) " translate" lf
+                display-w " " display-h " scale" lf
+                "/ImgSrc currentfile /ASCIIHexDecode filter /DCTDecode filter def" lf
+                "/imgstr " w " 3 mul string def" lf
+                w " " h " 8 [" w " 0 0 -" h " 0 " h "]" lf
+                "{ImgSrc imgstr readstring pop}" lf
+                "false 3 colorimage" lf
+                hex lf
+                "grestore" lf
+            ]
+        ][
+            info: read-png-pixels file
+            unless info [
+                print rejoin ["Warning: cannot read PNG " file]
+                return false
+            ]
+            w: info/1  h: info/2  ncomp: info/3
+            hex: binary-to-hex info/4
+            img-op: either ncomp = 1 ["image"]["colorimage"]
+            append out rejoin [
+                "gsave" lf
+                x " " (y - display-h) " translate" lf
+                display-w " " display-h " scale" lf
+                "/ImgSrc currentfile /ASCIIHexDecode filter def" lf
+                "/imgstr " w " " ncomp " mul string def" lf
+                w " " h " 8 [" w " 0 0 -" h " 0 " h "]" lf
+                "{ImgSrc imgstr readstring pop}" lf
+                either ncomp = 1 [""][rejoin ["false " ncomp " "]]
+                img-op lf
+                hex lf
+                "grestore" lf
+            ]
         ]
         true
     ]
@@ -1346,7 +1501,7 @@ context [
                             ;--- Image: ['IMAGE display-width %file.jpg] ---
                             img-display-w: item/2
                             img-file: item/3
-                            img-size: read-jpeg-size img-file
+                            img-size: read-image-size img-file
                             either img-size [
                                 img-display-h: to integer! img-display-w * img-size/2 / img-size/1
                                 if (page-y - img-display-h) < page-bottom [new-page]

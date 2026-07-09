@@ -314,15 +314,18 @@ Omit width — the module measures content and calculates automatically. Three f
 
 ## Images
 
-JPEG images can be embedded in the content flow:
+JPEG and PNG images can be embedded in the content flow:
 
 ```red
 ['IMAGE 300 %photo.jpg]
+['IMAGE 400 %screenshot.png]
 ```
 
 The `300` is the display width in points. The height is calculated automatically from the aspect ratio. If the image doesn't fit on the current page, a page break is inserted.
 
-The JPEG data is hex-encoded and embedded in the PostScript output using the `DCTDecode` filter, then rendered via `colorimage`. No external file references — the PDF is self-contained.
+For JPEG, the data is hex-encoded and embedded using the PostScript `DCTDecode` filter. For PNG, the image is decompressed and unfiltered in Red, then embedded as raw pixel data using `colorimage`. Both produce self-contained PDFs.
+
+Supported: 8-bit non-interlaced JPEG and PNG (RGB, RGBA, grayscale, palette).
 
 ## Conditional page breaks
 
@@ -419,8 +422,10 @@ The module is wrapped in a `context` to isolate all internal state. `generate-re
 | `char-est-width` | Estimated pixel width of a character at current font-size |
 | `measure-column-pixels` | Measures max pixel width across column lines using per-char estimation |
 | `read-jpeg-size` | Read JPEG dimensions from file header. Returns [width height] or none |
+| `read-png-pixels` | Read PNG, decompress, unfilter. Returns [width height ncomp pixel-data] or none |
+| `read-image-size` | Read JPEG or PNG dimensions. Returns [width height] or none |
 | `binary-to-hex` | Convert binary data to uppercase hex string |
-| `emit-image` | Emit PostScript code to render a JPEG image |
+| `emit-image` | Emit PostScript code to render a JPEG or PNG image |
 | `assemble-ps` | Builds the final PostScript document from page buffers |
 | `convert-to-pdf` | Calls `ps2pdf` with error handling |
 
