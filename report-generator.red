@@ -1086,6 +1086,8 @@ context [
 
     ;--- Image support ---
 
+    img-tmp-counter: 0
+
     emit-image: function [
         "Emit PostScript code to render an image (any format Red supports)"
         out [string!] x [integer!] y [integer!]
@@ -1100,7 +1102,8 @@ context [
         ]
         w: img/size/x
         h: img/size/y
-        tmp-file: to file! rejoin [what-dir %reports/.img-tmp.jpg]
+        set 'img-tmp-counter (get 'img-tmp-counter) + 1
+        tmp-file: to file! rejoin [what-dir %reports/.img-tmp- (get 'img-tmp-counter) ".jpg"]
         save/as tmp-file img 'jpeg
         abs-path: either #"/" = first to string! tmp-file [tmp-file][
             to file! rejoin [what-dir tmp-file]
