@@ -1087,11 +1087,11 @@ context [
     ;--- Image support ---
 
     emit-image: function [
-        "Emit PostScript code to render a JPEG or PNG image"
+        "Emit PostScript code to render an image (any format Red supports)"
         out [string!] x [integer!] y [integer!]
         display-w [integer!] display-h [integer!]
         file [file!]
-        /local img w h rgb-data tmp-file abs-path p
+        /local img w h tmp-file abs-path
     ][
         img: attempt [load file]
         unless img [
@@ -1100,15 +1100,8 @@ context [
         ]
         w: img/size/x
         h: img/size/y
-        rgb-data: make binary! w * h * 3
-        repeat i (w * h) [
-            p: pick img i
-            append rgb-data p/1
-            append rgb-data p/2
-            append rgb-data p/3
-        ]
-        tmp-file: to file! rejoin [what-dir %reports/.img-pixels.tmp]
-        write/binary tmp-file rgb-data
+        tmp-file: to file! rejoin [what-dir %reports/.img-tmp.jpg]
+        save/as tmp-file img 'jpeg
         abs-path: either #"/" = first to string! tmp-file [tmp-file][
             to file! rejoin [what-dir tmp-file]
         ]
@@ -1116,7 +1109,7 @@ context [
             "gsave" lf
             x " " (y - display-h) " translate" lf
             display-w " " display-h " scale" lf
-            "/ImgSrc (" ps-escape to string! abs-path ") (r) file def" lf
+            "/ImgSrc (" ps-escape to string! abs-path ") (r) file /DCTDecode filter def" lf
             "/imgstr " w " 3 mul string def" lf
             w " " h " 8 [" w " 0 0 -" h " 0 " h "]" lf
             "{ImgSrc imgstr readstring pop}" lf

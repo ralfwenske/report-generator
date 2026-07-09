@@ -36,7 +36,8 @@ append rpt reduce [
         widget-C
         ["TOTALS" ['b] "" "$13'780.00" ""]
     ]
-    ['IMAGE 300 %reports/PDF-Report.png ]
+    ['IMAGE 500 %reports/PDF-Report.png ]
+    ['IMAGE 300 %reports/crypto.jpg ]
     ["and here a columns demo" ['u 'h2]]
     get-items ['COLUMN]
     'FOOTER
