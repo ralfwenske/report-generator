@@ -1287,7 +1287,7 @@ context [
                 w " " h " 8 [" w " 0 0 -" h " 0 " h "]" lf
                 "{ImgSrc imgstr readstring pop}" lf
                 "false 3 colorimage" lf
-                hex lf
+                hex ">" lf
                 "grestore" lf
             ]
         ][
@@ -1309,7 +1309,7 @@ context [
                 "{ImgSrc imgstr readstring pop}" lf
                 either ncomp = 1 [""][rejoin ["false " ncomp " "]]
                 img-op lf
-                hex lf
+                hex ">" lf
                 "grestore" lf
             ]
         ]
@@ -1496,11 +1496,11 @@ context [
                             (length? item) = 3
                             item/1 = 'IMAGE
                             integer? item/2
-                            file? item/3
+                            any [file? item/3 string? item/3]
                         ][
-                            ;--- Image: ['IMAGE display-width %file.jpg] ---
+                            ;--- Image: ['IMAGE display-width %file] ---
                             img-display-w: item/2
-                            img-file: item/3
+                            img-file: to file! item/3
                             img-size: read-image-size img-file
                             either img-size [
                                 img-display-h: to integer! img-display-w * img-size/2 / img-size/1
