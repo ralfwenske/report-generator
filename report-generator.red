@@ -384,11 +384,35 @@ context [
             if pad-w > 0 [text: pad-text copy text pad-w align]
             either any-style? [select-style-font out styles][emit-font out regular-font]
             if bg [
-                append out rejoin [
-                    "gsave " tuple-to-rgb bg " setrgbcolor"
-                    " " x " " (y - 5)
-                    " (" ps-escape text ") stringwidth pop"
-                    " " (sz + 4) " rectfill grestore" lf
+                case [
+                    align = "C" [
+                        append out rejoin [
+                            "gsave " tuple-to-rgb bg " setrgbcolor"
+                            " (" ps-escape text ") stringwidth pop /_tw exch def"
+                            " _tw " col-w " exch sub 2 div " x " add"
+                            " " (y - 5) " moveto _tw 0 rlineto"
+                            " 0 " (sz + 4) " rlineto _tw neg 0 rlineto"
+                            " closepath fill grestore" lf
+                        ]
+                    ]
+                    align = "R" [
+                        append out rejoin [
+                            "gsave " tuple-to-rgb bg " setrgbcolor"
+                            " (" ps-escape text ") stringwidth pop /_tw exch def"
+                            " " col-w " _tw sub " x " add"
+                            " " (y - 5) " moveto _tw 0 rlineto"
+                            " 0 " (sz + 4) " rlineto _tw neg 0 rlineto"
+                            " closepath fill grestore" lf
+                        ]
+                    ]
+                    true [
+                        append out rejoin [
+                            "gsave " tuple-to-rgb bg " setrgbcolor"
+                            " " x " " (y - 5)
+                            " (" ps-escape text ") stringwidth pop"
+                            " " (sz + 4) " rectfill grestore" lf
+                        ]
+                    ]
                 ]
             ]
             if fg [emit out ["gsave " tuple-to-rgb fg " setrgbcolor"]]

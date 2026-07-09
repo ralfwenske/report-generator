@@ -3,50 +3,8 @@ Red [
     Needs: 'View
 ]
 
+do load %what-columns.red      ;provides data (what-columns)  
 do %report-generator.red
-what-functions: load %functions.txt
-; structure: [["name" "type" {description}] ...]
-
-what-kinds: function [] [
-    kinds: []
-    foreach item what-functions [
-        unless find kinds item/2 [
-            append kinds item/2
-        ]
-    ]
-    kinds
-] ; what-kinds
-
-what-filter: function [filter [string!]] [
-    result: copy []
-    foreach item what-functions [
-        if item/2 = filter [
-            append result trim item/1
-        ]
-    ]
-    result
-] ; what-filter
-
-what-columns: function [] [
-    result: copy []
-    foreach kind what-kinds [
-        title: copy rejoin ["Red - " kind]
-        append result reduce [
-            []
-            ["^L" 10]
-            reduce [title ['h2] "  shown in as many columns as fit (automatically)" ['i]]
-            []
-        ]
-        kind-column: copy ['COLUMN * 0]
-        f: copy what-filter kind
-        repeat ix (length? f) [
-            append/only kind-column reduce [f/(ix)]
-        ]
-        append/only result kind-column
-    ]
-    result
-] ; what-columns
-
 
 std-header: func [title [string!]] [
     reduce [
