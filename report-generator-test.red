@@ -104,11 +104,11 @@ view/options layout [
     title "PDF Generator Test"
     below
     text 180x20 "PDF Generator Test" bold white center
-    preview: check "Preview" true
-    landscape: check "Landscape" false
+    preview: check "Preview" true 
+    landscape-check: check "Landscape" false
 
     button "PDF Report" [
-        either landscape/data [
+        either landscape-check/data [
             paper-format/landscape 'a4
             emit-report pdf-report %report-landscape.pdf
         ][
@@ -117,9 +117,16 @@ view/options layout [
         ]
         unview
     ]
+    button "Simple Report" [
+        either landscape-check/data [
+            do/args %basic-demo.red 'landscape
+        ][
+            do/args %basic-demo.red 'portrait 
+        ]
+    ]
     button "Dump Source" [
         foreach item pdf-report [
             probe item
         ]
     ]
-][size: 200x200]
+][size: 200x240]

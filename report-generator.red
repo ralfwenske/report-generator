@@ -1,7 +1,11 @@
 Red [
+    File: %report-generator.red
     Title: "Report Generator Module v5"
     Purpose: "Generate multi-page A4 PostScript reports with flat content DSL"
+    Author: "Ralf Wenske"
+    Helpers: "Kilo and MiMo-V2.5-Pro (~ $25)"
     Exports: [generate-report paper-format fontsize]
+    Date: 2026-07-09
 ]
 
 context [
@@ -1317,7 +1321,7 @@ context [
                                     ]
                                     if (page-y - img-display-h) < page-bottom [new-page]
                                     emit-image page-content margin-left page-y img-display-w img-display-h img-file
-                                    page-y: page-y - img-display-h
+                                    page-y: page-y - img-display-h - 8
                                 ][
                                     print rejoin ["Warning: unsupported or unreadable image: " img-file]
                                 ]
@@ -1362,7 +1366,7 @@ context [
 
         if browser [
             browse pdf-file
-            delete ps-file
         ]
+        delete ps-file
     ] ; generate-report
 ];context
