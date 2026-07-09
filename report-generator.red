@@ -1091,7 +1091,7 @@ context [
         out [string!] x [integer!] y [integer!]
         display-w [integer!] display-h [integer!]
         file [file!]
-        /local img w h tmp-file abs-path bg
+        /local img w h tmp-file abs-path
     ][
         img: attempt [load file]
         unless img [
@@ -1100,10 +1100,8 @@ context [
         ]
         w: img/size/x
         h: img/size/y
-        bg: make image! reduce [img/size 255.255.255]
-        draw bg compose [image (img) 0x0]
         tmp-file: to file! rejoin [what-dir %reports/.img-tmp.jpg]
-        save/as tmp-file bg 'jpeg
+        save/as tmp-file img 'jpeg
         abs-path: either #"/" = first to string! tmp-file [tmp-file][
             to file! rejoin [what-dir tmp-file]
         ]
