@@ -15,10 +15,9 @@ get-items: func [res [block!]] [
     res
 ]
 
-landscape: system/script/args
-
 title: "Basic Demo"
-widget-C:  [[red] "Widget C" [green] "-45" [red] total [red] "Check" [255.165.0 white]]
+total: 5123.87654
+widget-C:  [[red] "Widget C" [12 green '>] -45 [6.2 '>]  total [red 10.3] " Check" [white 255.165.0]]
 fourthousand: 4000
 
 rpt: copy []
@@ -28,28 +27,31 @@ append rpt reduce [
     ["Page %PAGE% of %PAGES%" "" "%TIME%"]
     []
     'CONTENT
-    ["This code generates this pdf page:" ['h2 yellow]]
+    ["This code generates this pdf page:" ['h2 yellow black]]
     ['IMAGE 400 %reports/PDF-Report-Code.png ]
-    []
-    ["Generated on " ['i] "%DATE%"]
-    []
-    [['m] " Sample content goes here. " [purple white] " And yellow here " [yellow black]]
+    ['COLUMN 33 3
+        ["Generated on " ['i] "%DATE%"]
+        ["Generated on " ['i] now [14 'date '>]]    
+        [['m] "Generated on " ['i] "%DATE%"]
+        [['m] "Generated on " ['i] now [14 'date '>]]
+    ]
+    [['m] " Sample content goes here. " [white purple] " And yellow here " [black yellow]]
     ["Table with 'box 'alt" ['u 'h2]]
-    ['table 'box 'alt
-        ["Product" ['< 180] "Qty" ['^ 60 5.4 ] "Total" ['> 80 'money] "Status" ['^ 80]]
-        ["Widget A" 120 threethousand ['b] "OK" [80.128.80 white]]
-        ["Widget A1" 120 fourthousand ['b] "OK" [80.128.80 white]]
-        ["Widget B" [80.150.200] "45" total "Check" [55.105.90 white]]
+    ['TABLE 'BOX 'ALT
+        ["Product" ['< 30] "Qty" ['^ 10 10.4 ] "Total" ['> 13 'money] "Status" ['^ 13]]
+        ["Widget A" 120 threethousand ['b] "OK" [white 80.128.80]]
+        ["Widget A1" 120 fourthousand ['b] "OK" [white 80.128.80]]
+        ["Widget B" [80.150.200] "45" total "Check" [white 55.105.90]]
         widget-C
         ["TOTALS" ['b] "" "$13'780.00" ""]
     ]
-    ["and here a columns demo" ['u 'h2]]
-    get-items ['COLUMN]
+    ["and here another columns demo" ['u 'h2]]
+    get-items ['COLUMN]  ; generate 30 items
     'FOOTER
     []
-    [['b] " Confidential " ['h3 blue white] "%DATE%" "Page %PAGE% of %PAGES%"]
+    [['b] " Confidential " ['h3 white blue] "%DATE%" "Page %PAGE% of %PAGES%"]
 ]
-if landscape = 'landscape [
+if system/script/args = 'landscape [
     paper-format/landscape 'a4
 ]
 generate-report/browser rpt rejoin [report-dir %basic-demo.pdf]

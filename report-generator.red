@@ -23,7 +23,7 @@ context [
     stroke-width: 0.5
     header-gray: 0.85
     alt-row-gray: 0.95
-    default-col-width: 80
+    default-col-width: 12
     bold-font: "/Times-Bold"
     italic-font: "/Times-Italic"
     bold-italic-font: "/Times-BoldItalic"
@@ -180,8 +180,8 @@ context [
         ]
     ]
 
-    style-bg-color: func [
-        "Extract first tuple from styles as background color, or none"
+    style-fg-color: func [
+        "Extract first tuple from styles as font color, or none"
         styles [block!]
         /local s
     ][
@@ -189,8 +189,8 @@ context [
         none
     ]
 
-    style-fg-color: func [
-        "Extract second tuple from styles as font color, or none"
+    style-bg-color: func [
+        "Extract second tuple from styles as background color, or none"
         styles [block!]
         /local s count
     ][
@@ -227,6 +227,18 @@ context [
 
     style-has: func ["Check if style block contains target word" styles [block!] target [word!]][
         not none? find styles target
+    ]
+
+    style-align: func [
+        "Extract alignment from styles ('< = L, '^ = C, '> = R), or return default"
+        styles [block!] default [string!]
+    ][
+        case [
+            find styles '< ["L"]
+            find styles '^ ["C"]
+            find styles '> ["R"]
+            true [default]
+        ]
     ]
 
     style-width: func ["Extract integer width from styles, or 0" styles [block!] /local s][
@@ -362,7 +374,7 @@ context [
 
         either join [
             pad-w: style-width styles
-            if pad-w > 0 [text: pad-text copy text pad-w "L"]
+            if pad-w > 0 [text: pad-text copy text pad-w align]
             either any-style? [select-style-font out styles][emit-font out regular-font]
             if bg [
                 append out rejoin [
@@ -459,13 +471,8 @@ context [
                     decimals: 0
                 ]
                 result: format-decimal val decimals
-                int-part: either find result #"." [
-                    copy/part result find result #"."
-                ][
-                    copy result
-                ]
-                if (length? int-part) < int-width [
-                    result: rejoin [copy/part "                    " (int-width - length? int-part) result]
+                if (length? result) < int-width [
+                    insert/dup result " " (int-width - length? result)
                 ]
                 result
             ]
@@ -552,7 +559,7 @@ context [
                     cur-align: "L"
                     cur-bold: false
                     cur-format: none
-                    cur-width: default-col-width
+                    cur-width: to integer! default-col-width * font-size * 0.5
                     cur-blank: false
                     foreach s v [
                         case [
@@ -563,7 +570,7 @@ context [
                             s = 'blank  [cur-blank: true]
                             s = 'money  [cur-format: 'money]
                             s = 's1000   [cur-format: 's1000]
-                            integer? s  [cur-width: s]
+                            integer? s  [cur-width: to integer! s * font-size * 0.5]
                             float? s    [cur-format: s]
                         ]
                     ]
@@ -610,17 +617,16 @@ context [
                 cur-styles: resolve-colors v
                 fmt: none
                 foreach s cur-styles [
-                    case [
-                        float? s    [fmt: s]
-                        integer? s  [fmt: to float! s]
-                    ]
+                    if float? s [fmt: s]
                 ]
                 if cur-text [
-                    if all [fmt number? cur-text][
-                        cur-text: format-number-value cur-text fmt
-                    ]
-                    if all [find cur-styles 's1000 number? cur-text][
-                        cur-text: format-decimal cur-text 0
+                    if all [find cur-styles 'blank number? cur-text cur-text = 0][cur-text: ""]
+                    if number? cur-text [
+                        case [
+                            find cur-styles 'money [cur-text: format-number-value cur-text 'money]
+                            find cur-styles 's1000 [cur-text: format-decimal cur-text 0]
+                            fmt                    [cur-text: format-number-value cur-text fmt]
+                        ]
                     ]
                     if date? cur-text [
                         case [
@@ -753,7 +759,7 @@ context [
                 styles: merge-styles line-styles segments/1
                 text: segments/2
                 if any [number? text date? text] [text: form text]
-                emit-styled-text out margin-left page-y text col-w "L" styles
+                emit-styled-text out margin-left page-y text col-w (style-align styles "L") styles
             ][
                 emit-text-start out margin-left page-y
                 i: 1
@@ -761,7 +767,7 @@ context [
                     styles: merge-styles line-styles pick segments i
                     text: pick segments (i + 1)
                     if any [number? text date? text] [text: form text]
-                    emit-styled-text/join out margin-left page-y text col-w "L" styles
+                    emit-styled-text/join out margin-left page-y text col-w (style-align styles "L") styles
                     i: i + 2
                 ]
             ]
@@ -867,7 +873,13 @@ context [
             ]
         ]
 
-        col-styles: parse-row-segments row
+        either all [not empty? row block? row/1][
+            row-styles: resolve-colors row/1
+            col-styles: parse-row-segments copy next row
+        ][
+            row-styles: copy []
+            col-styles: parse-row-segments row
+        ]
 
         col-x: tl
         col-i: 1
@@ -883,13 +895,14 @@ context [
                 styles: either col-i <= ((length? col-styles) / 2) [
                     pick col-styles ((col-i - 1) * 2 + 1)
                 ][copy []]
+                foreach s row-styles [unless find styles s [append/only styles s]]
                 raw-val: either col-i <= ((length? col-styles) / 2) [
                     pick col-styles (col-i * 2)
                 ][none]
 
                 final-styles: copy []
                 if pick col-bolds col-i [append final-styles 'b]
-                foreach s styles [unless any [find final-styles s  s = 'blank  s = 's1000] [append final-styles s]]
+                foreach s styles [unless any [find final-styles s  s = 'blank  s = 's1000  s = 'money] [append final-styles s]]
 
                 text: case [
                     none? raw-val   [""]
@@ -900,10 +913,13 @@ context [
                         either col-format [
                             format-number-value raw-val col-format
                         ][
-                            either find styles 's1000 [
-                                format-decimal raw-val 0
-                            ][
-                                form raw-val
+                            cell-fmt: none
+                            foreach s styles [if float? s [cell-fmt: s]]
+                            case [
+                                find styles 'money [format-number-value raw-val 'money]
+                                find styles 's1000 [format-decimal raw-val 0]
+                                cell-fmt           [format-number-value raw-val cell-fmt]
+                                true               [form raw-val]
                             ]
                         ]
                     ]
@@ -917,7 +933,7 @@ context [
                     ]
                     true            [form raw-val]
                 ]
-                emit-styled-text out (col-x + cell-pad) text-y text (col-w - (cell-pad * 2)) col-align final-styles
+                emit-styled-text out (col-x + cell-pad) text-y text (col-w - (cell-pad * 2)) (style-align final-styles col-align) final-styles
             ]
             col-x: col-x + col-w
             col-i: col-i + 1
@@ -1235,8 +1251,8 @@ context [
                         ;--- Column layout ---
                         either all [(length? item) >= 3 number? item/2 number? item/3][
                             ; Explicit: ['column col-width gap-width line1 line2 ...]
-                            col-col-w: item/2
-                            col-gap: item/3
+                            col-col-w: to integer! item/2 * font-size * 0.5
+                            col-gap: to integer! item/3 * font-size * 0.5
                             col-rows: copy []
                             ci: 4
                             while [ci <= length? item][
@@ -1246,7 +1262,7 @@ context [
                         ][
                             either all [(length? item) >= 3 item/2 = '* integer? item/3][
                                 ; Auto with gap: ['column * gap line1 line2 ...]
-                                col-gap: item/3
+                                col-gap: to integer! item/3 * font-size * 0.5
                                 col-rows: copy []
                                 ci: 4
                                 while [ci <= length? item][

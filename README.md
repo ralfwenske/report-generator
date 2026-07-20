@@ -43,9 +43,34 @@ fontsize 14                                   ; set font size in points (default
 | `paper-format` | `name` | `word!` | Paper size: `a4`, `letter`, `legal`, `a3`, `a5` |
 | `fontsize` | `size` | `integer!` | Font size in points (default: 12) |
 
+## The one rule
+
+Everything in report-generator follows a single pattern:
+
+```red
+[ [styles] value [styles] value value [styles]]
+```
+
+Styles are optional `[blocks]` that modify the preceding value. If a style is not applicable in a given context, it is silently ignored.
+
+**How styles work:**
+
+1. A **leading** style block (first element of a line) applies to the whole line as a default
+2. A style block **following** a value applies to that value
+3. Per-value styles **merge** with line-wide styles — per-value takes precedence
+4. **All styles work everywhere** — content lines, table cells, column definitions, headers, footers
+
+```red
+["Hello" ['b]]                              ; "Hello" in bold
+[['i] "Hello" ['b] " world"]                ; line-wide italic; "Hello" bold+italic, " world" italic
+["Name:" ['b 20 '>] "Value" ['i]]           ; "Name:" bold, right-padded 20 chars; "Value" italic
+[now ['date '>]]                            ; date value, right-aligned
+[0 ['blank]]                                ; zero suppressed (empty)
+```
+
 ## Content structure
 
-The content block is a flat list of items delimited by section markers:
+The content block is a flat list delimited by section markers:
 
 ```red
 generate-report [
@@ -58,107 +83,94 @@ generate-report [
 ] %report.pdf
 ```
 
-Each section contains line blocks. Tables are inline — no nesting or `reduce` needed.
-
-### Section markers
-
 | Marker | Purpose |
 |--------|---------|
 | `'HEADER` | Lines shown at the top of every page |
 | `'CONTENT` | Report body: text lines and tables |
 | `'FOOTER` | Lines shown at the bottom of every page |
 
-Sections are optional. If `'HEADER` is omitted, no header is rendered. Same for `'FOOTER`.
+Sections are optional. If omitted, no header/footer is rendered.
 
-## Line blocks
+## Styles reference
 
-Each line is a block. The first element determines the type:
+All styles are placed in optional `[blocks]`. They work the same everywhere — in content lines, table cells, column definitions, headers, and footers.
 
-- **Block** (first element is a block) — line-wide style, applies to all unstyled segments
-- **`'table`** (first element) — table definition
-- **`'column`** (first element) — multi-column layout
-- **Otherwise** — data elements followed by optional style blocks
+### Font styles
 
-### Data-then-style-block pattern
-
-Data elements are followed by style blocks that apply to the preceding element:
-
-```red
-["Hello" ['b]]                ; "Hello" in bold
-["Hello" ['b 'i]]             ; "Hello" in bold italic
-["Hello" ['h1]]               ; "Hello" as heading 1
-["Hello" []]                  ; "Hello" unstyled (empty block)
-["Hello"]                     ; "Hello" unstyled (no style block)
-```
-
-Multiple data+style pairs on one line:
-
-```red
-["Sales Summary" ['b] " for " "Q1 2015" ['u]]
-;   ^bold              ^regular    ^underlined
-```
-
-### Line-wide styles
-
-When the first element of a line block is a block (not followed by data), it's a line-wide style. Segments without their own style block inherit the line-wide style. Segments with their own style block **merge** with the line-wide style — inherited attributes are preserved:
-
-```red
-[['b] "ACME Corp" [h1] "Quarterly Report" [] "Confidential"]
-; ^line-wide bold  ^h1 for "ACME Corp"  ^regular (no style)  ^bold (inherited)
-```
-
-```red
-[['i] "ACME Corp" ['b 'h2] "%TIME%" "Page %PAGE% of %PAGES%"]
-; ^line-wide italic  ^bold h2 for "ACME Corp"  ^italic (inherited)  ^italic (inherited)
-```
-
-```red
-[['m] "Record #" 1 ['b 5.0] ": Value " 42 ['b 6.3]]
-; ^line-wide mono  ^mono (inherited)  ^mono bold (merged)  ^mono (inherited)  ^mono bold (merged)
-```
-
-## Style attributes
-
-| Attribute | Style |
-|-----------|-------|
+| Style | Effect |
+|-------|--------|
 | `b` | **Bold** |
 | `i` | *Italic* |
 | `u` | Underline |
 | `m` | Monospace (Courier) |
-| `h1` | Heading 1 (24pt bold) |
-| `h2` | Heading 2 (18pt bold) |
-| `h3` | Heading 3 (14pt bold) |
-| `'date` | Format preceding `date!` value as date only (e.g. `25-Jun-2026`) |
-| `'time` | Format preceding `date!` value as time only (e.g. `18:26`) |
-| `'datetime` | Format preceding `date!` value as date and time (e.g. `25-Jun-2026 18:26`) |
-| `'blank` | Suppress preceding value if it is the number `0` (show empty cell) |
-| `'s1000` | Format preceding number with thousand separators (e.g. `1'234'567`) |
-| `15` (integer) | Pad preceding string to fixed width (points). Left-pad for right-align, right-pad for left-align, split-pad for center |
-| `255.0.0` (tuple) | Background color (RGB 0-255). 1st tuple = background |
-| `0.0.200` (tuple) | Font color (RGB 0-255). 2nd tuple = font color |
+| `h1` | Heading 1 (24pt, bold by default) |
+| `h2` | Heading 2 (18pt, bold by default) |
+| `h3` | Heading 3 (14pt, bold by default) |
 
-Named colors (`red`, `yellow`, `blue`, `green`, `white`, `black`, etc.) work as tuples: `['b red yellow]` → red background, yellow text.
+Line and row heights adapt to the tallest segment.
 
-Attributes can be combined: `['b 'i 'u]` for bold italic underlined.
+### Alignment
 
-Headings default to bold font. All style attributes — including `'m`, `'h1`, `'h2`, `'h3` — can be applied per-segment. Line and row heights adapt to the tallest segment.
+| Style | Effect |
+|-------|--------|
+| `<` | Left-align |
+| `^` | Center |
+| `>` | Right-align |
+
+In headers and footers, alignment is positional (1st segment = left, 2nd = center, 3rd = right), so alignment styles are ignored there.
+
+### Number formatting
+
+| Style | Effect | Example |
+|-------|--------|---------|
+| `10.4` (float) | Total width (integer part) + decimal places (decimal part) | `42` with `10.4` -> `"    42.0000"` |
+| `'money` | Money with thousand separators | `1234.5` -> `"$1'234.50"` |
+| `'s1000` | Thousand separators, no decimals | `1234567` -> `"1'234'567"` |
+| `'blank` | Suppress zero values (show empty) | `0` -> `""` |
+
+The float's integer part sets the total field width (padded with spaces). The decimal part sets the number of decimal places. Padding direction follows alignment.
+
+### Date formatting
+
+| Style | Effect | Example |
+|-------|--------|---------|
+| `'date` | Date only | `25-Jun-2026` |
+| `'time` | Time only | `18:26` |
+| `'datetime` | Date and time | `25-Jun-2026 18:26` |
+
+### Width padding
+
+An integer in a style block sets the width in characters. In content lines it pads the preceding string or formatted number. In table column definitions it sets the column width. Padding direction follows alignment (default: left):
 
 ```red
-["Big " ['h1] "and small" [] " and " ['h3] "tiny" [] " on one line."]
+["Label:" ['b 20]]                    ; right-padded to 20 chars (left-aligned)
+["Name:" ['b 20 '>]]                  ; left-padded to 20 chars (right-aligned)
+["Title" ['b 40 '^]]                  ; center-padded to 40 chars
 ```
 
 ### Colors
 
-Tuples set background and font colors. The 1st tuple is the background, the 2nd is the font color. Use Red's predefined color names or numeric tuples:
+| Style | Effect |
+|-------|--------|
+| `255.0.0` (tuple) | 1st tuple = font color |
+| `0.0.200` (tuple) | 2nd tuple = background color |
+| `red`, `blue`, etc. | Named colors (resolve to tuples) |
 
 ```red
-["Alert" ['b red white]]              ; bold, red background, white text
-["Status" [0.128.0 white]]            ; green background, white text
-["Note" [yellow blue]]                ; yellow background, blue text
-["Colored text only" [255.0.0]]       ; red background only
+["Alert" ['b red white]]              ; bold, red text, white background
+["Status" [white 0.128.0]]            ; white text, green background
+["Note" [blue yellow]]                ; blue text, yellow background
+["Colored text only" [255.0.0]]       ; red text only
 ```
 
-Colors work in content lines and table cells. In table column definitions, colors are not applied (columns use fixed styling).
+### Combining styles
+
+All styles can be freely combined:
+
+```red
+["Alert" ['b 'i 'u red white]]       ; bold italic underlined, red text, white bg
+[['m] "Code" ['b 10.2]]             ; line-wide mono, "Code" mono bold, 10 chars, 2 decimals
+```
 
 ## Tables
 
@@ -166,7 +178,7 @@ Tables start with `'table` followed by optional modifiers, then a column definit
 
 ```red
 ['table 'box 'alt
-    ["Product" ['< 180] "Qty" ['^ 60 5.4] "Total" ['> 80 'money]]
+    ["Product" ['< 30] "Qty" ['^ 10 10.4] "Total" ['> 13 'money] "Status" ['^ 13]]
     ["Widget A" 120 3000]
     ["Widget B" "45" 1890.0]
     ["TOTALS" ['b] "" 13780.00]
@@ -177,37 +189,27 @@ Tables start with `'table` followed by optional modifiers, then a column definit
 
 | Modifier | Meaning |
 |----------|---------|
-| `'box` | Draw outer border around table |
+| `'box` | Draw outer border |
 | `'alt` | Alternate row background (light gray on even rows) |
 
-Both can be combined: `'table 'box 'alt`. Column separators are always drawn. Header rows always have a gray background.
+Both can be combined. Column separators are always drawn. Header rows always have a gray background.
 
 ### Column definitions
 
-Each column title is followed by a style block specifying alignment, width, and format:
+Each column title is followed by a style block setting defaults for that column. All styles work — alignment, width, format, bold, colors, etc.
 
 ```red
-["Product" ['< 180] "Qty" ['^ 60 5.4] "Total" ['> 80 'money]]
+["Product" ['< 30] "Qty" ['^ 10 10.4] "Total" ['> 13 'money]]
 ```
-
-| Modifier | Meaning |
-|----------|---------|
-| `'<` | Left-align column |
-| `'^` | Center column |
-| `'>` | Right-align column |
-| `'b` | Bold data cells in column (header itself is always bold) |
-| `'blank` | Suppress zero values — show empty cell instead of `0` |
-| `'money` | Format numbers as money with thousands separator |
-| `'s1000` | Format numbers with thousand separators only (no `$` or decimals) |
-| `5.4` | Format numbers with 4 decimal places |
-| `180` | Set column width in points (default: 80) |
 
 ### Styled table cells
 
-Style blocks work inside table rows:
+All styles work in table cells and override column defaults. A leading style block applies to the entire row:
 
 ```red
-["Widget A" ['i] "Active" ['b 'u] 250.00]
+[['b] "Widget A" 120 3000]                      ; entire row bold
+[['b red white] "Widget A" 120 3000]            ; entire row: bold, red text, white bg
+["Widget A" ['i] "Active" ['b 'u '>] 250.00]   ; cell-level overrides
 ```
 
 ### Page breaks in tables
@@ -218,216 +220,79 @@ Use a row where the first column is `"^L"` to break a table across pages. The ta
 ["^L" "" ""]
 ```
 
-## Number and money formatting
-
-Numbers in table cells are formatted automatically based on the column definition:
-
-- **`'money`** — formats as `$1'234.50` with thousands separator and 2 decimal places
-- **`'s1000`** — formats as `1'234` with thousands separator, no decimals
-- **`5.4`** — formats with 4 decimal places
-- **No format** — numbers displayed as-is
-
-### Float formatting in style blocks
-
-A float in a style block formats the preceding number. The integer part specifies the minimum field width (padded with leading spaces), and the decimal part specifies the number of decimal places:
-
-```red
-["Amount: " 42.5678 ['b 2.0]]    ; → "42" (bold, 0 decimals, min width 2)
-["Value: " 42 ['m 6.3]]          ; → "   42.000" (mono, 3 decimals, min width 6)
-["Pi: " 3.14159 ['m 5.4]]        ; → "3.1415" (mono, 4 decimals, min width 5)
-```
-
-Works in content lines and table cells. If the preceding data is not a number, the float is ignored.
-
-### Date, time, and blank formatting in style blocks
-
-Date values (`date!` type) can be formatted with `'date`, `'time`, or `'datetime` styles. The `'blank` style suppresses zero values:
-
-```red
-[now ['date]]                           ; → "25-Jun-2026"
-[now ['time]]                           ; → "18:26"
-[now ['datetime]]                       ; → "25-Jun-2026 18:26"
-["Value: " 0 ['blank] " end"]           ; → "Value:  end" (zero suppressed)
-```
-
-Works in content lines and table cells. In table columns, `'blank` can also be set at the column level. If the preceding data is not a `date!` value, the date style is ignored.
-
-### String width padding
-
-An integer in a style block pads the preceding string to a fixed width (in points). The padding direction follows the text alignment:
-
-```red
-["Label:" ['b 80]]              ; "Label:" right-padded to 80pt (left-aligned)
-["Name:" ['b 80 '>]]           ; "Name:" left-padded to 80pt (right-aligned)
-["Title" ['b 200 '^]]          ; "Title" center-padded to 200pt
-```
-
-Works in content lines and table cells. If the preceding data is not a string, the width is ignored.
-
 ## Columns layout
 
 Multi-column layout for short lines, like newspaper columns. Rows are distributed evenly across columns, filling left-to-right.
 
-### Explicit columns
-
-Specify column width and gap in points:
-
 ```red
-['column 200 20
-    [['m] "Record #" 1 ['b 5.0]]
-    [['m] "Record #" 2 ['b 5.0]]
+['column 33 3                           ; explicit: 33 chars wide, 3 chars gap
+    [['m] "Record #" 1 ['b 10.2]]
+    [['m] "Record #" 2 ['b 10.2]]
     ...
 ]
-```
 
-| Parameter | Meaning |
-|-----------|---------|
-| `'column` | Starts a column layout block |
-| `200` | Column width in points |
-| `20` | Gap between columns in points |
-
-### Auto-width columns
-
-Omit width — the module measures content and calculates automatically. Three forms:
-
-```red
-; Auto-width, default 20pt gap
-['column
+['column * 3                            ; auto-width, 3 chars gap
     [['m] "short"]
     [['m] "a much longer line"]
     ...
 ]
 
-; Auto-width, explicit gap
-['column * 15
+['column                                ; auto-width, default 0 gap
     [['m] "short"]
-    [['m] "a much longer line"]
     ...
 ]
 ```
-
-| Form | Meaning |
-|------|---------|
-| `['column 200 15 ...]` | Explicit width (200pt) and gap (15pt) |
-| `['column * 15 ...]` | Auto-width from content, 15pt gap |
-| `['column ...]` | Auto-width from content, default 0pt gap |
 
 ## Images
 
-JPEG and PNG images can be embedded in the content flow:
-
 ```red
-['IMAGE 300 %photo.jpg]
+['IMAGE 300 %photo.jpg]                 ; 300pt wide, height from aspect ratio
 ['IMAGE 400 %screenshot.png]
 ```
-
-The `300` is the display width in points. The height is calculated automatically from the aspect ratio. If the image doesn't fit on the current page, a page break is inserted.
-
-For JPEG, the data is hex-encoded and embedded using the PostScript `DCTDecode` filter. For PNG, the image is decompressed and unfiltered in Red, then embedded as raw pixel data using `colorimage`. Both produce self-contained PDFs.
 
 Supported: 8-bit non-interlaced JPEG and PNG (RGB, RGBA, grayscale, palette).
 
 ## Conditional page breaks
-
-`["^L" N]` breaks to a new page only if fewer than N lines remain:
 
 ```red
 ["^L" 15]     ; break only if < 15 lines of space left
 "^L"          ; unconditional break (string, not block)
 ```
 
-Useful for keeping sections together without forcing unnecessary breaks.
-
 ## Header and footer tokens
 
-| Token | Replaced with | Example output |
-|-------|---------------|----------------|
+| Token | Replaced with | Example |
+|-------|---------------|---------|
 | `%PAGE%` | Current page number | `3` |
 | `%PAGES%` | Total number of pages | `12` |
-| `%DATE%` | Current date | `2026-06-20` |
+| `%DATE%` | Current date | `2026-07-20` |
 | `%TIME%` | Current time (hh:mm) | `19:04` |
-| `%DATETIME%` | Date and time combined | `2026-06-20 19:04` |
-
-Header and footer lines support positional alignment: 1st segment is left-aligned, 2nd is centered, 3rd is right-aligned.
+| `%DATETIME%` | Date and time | `2026-07-20 19:04` |
 
 ## Page layout
 
 - Default: A4 (595 x 842 pts). Use `paper-format` to change: `a4`, `letter`, `legal`, `a3`, `a5`. Add `/landscape` for horizontal orientation.
 - 50pt margins on all sides
-- Font: Times-Roman 12pt (configurable via `fontsize`), line height 15pt. Available styles: Times-Bold, Times-Italic, Times-BoldItalic. Mono: Courier family (`'m` tag).
+- Font: Times-Roman 12pt (configurable via `fontsize`), line height 15pt. Mono: Courier family (`'m`).
 - Line and row heights adapt to the largest font size in the line/row
-- Table headers: always bold 12pt with gray background, fixed 19pt height
-- Table data rows: height adapts to largest segment font size
-- Column separators: thin 0.5pt lines
 
 ## Examples
 
-### Full example
-
-See [`report-generator-test.red`](report-generator-test.red) — a GUI with buttons to generate portrait and landscape demo PDFs. Run with `red-view report-generator-test.red`. Includes Preview and Landscape checkboxes. Demonstrates all features: text styles, headings, monospace, colored cells, boxed/plain/alternating tables, number formatting, auto-width column layout with dynamic content, and mixed font sizes.
+See [`report-generator-test.red`](report-generator-test.red) for a GUI test harness. Run with `red-view report-generator-test.red`. Includes portrait/landscape demos with all features: text styles, headings, monospace, colored cells, boxed/alternating tables, number formatting, column layout, and images.
 
 ## File overview
 
 | File | Purpose |
 |------|---------|
 | `report-generator.red` | The module. Load with `do %report-generator.red` |
-| `report-generator-test.red` | GUI test harness — run with `red-view report-generator-test.red` |
-| `functions.txt` | Data file used by the test harness for dynamic column layout |
+| `report-generator-test.red` | GUI test harness |
+| `basic-demo.red` | Minimal demo script |
+| `what-columns.red` | Data file used by the test harness for dynamic column layout |
 | `reports/` | Output directory for generated PDFs (gitignored) |
 
 ## Architecture
 
-The module is wrapped in a `context` to isolate all internal state. `generate-report` and `paper-format` are exported (via `set`).
-
-**Internal helpers:**
-
-| Function | Purpose |
-|----------|---------|
-| `emit` | Appends a PostScript line with newline to output buffer |
-| `ps-escape` | Escapes `\`, `(`, `)` in PostScript strings |
-| `emit-font` | Emits a PostScript font selection command |
-| `emit-text` | Emits a left/center/right-aligned text drawing command |
-| `emit-text-join` | Emits left-aligned text using PS `currentpoint` chaining |
-| `emit-text-start` | Initializes PS variables for a joined line |
-| `emit-underline` | Draws an underline beneath text |
-| `emit-styled-text` | Selects font, emits aligned text with styles and colors |
-| `emit-rect` | Emits a stroked rectangle (0.5pt lines) |
-| `emit-filled-rect` | Emits a filled rectangle with gray fill |
-| `emit-vline` | Emits a thin vertical line (column separator) |
-| `emit-header` | Emits header lines with L/C/R positioning and styles |
-| `emit-footer` | Emits footer lines with token replacement and styles |
-| `emit-header-line` | Emits a single header/footer line with line-wide style support |
-| `emit-content-line` | Emits a single content line with line-wide style support |
-| `emit-table-row` | Emits a table row (header or data) with box alignment |
-| `merge-styles` | Merges line-wide styles into segment styles |
-| `resolve-colors` | Resolves color words (e.g. `red`) to tuples in a style block |
-| `tuple-to-rgb` | Converts Red tuple (0-255) to PostScript RGB string (0.0-1.0) |
-| `style-bg-color` | Extracts first tuple from styles as background color |
-| `style-fg-color` | Extracts second tuple from styles as font color |
-| `parse-sections` | Splits flat content into header/content/footer by lit-word markers |
-| `parse-line` | Extracts line-wide style block and segments from a line block |
-| `parse-row-segments` | Parses data+style blocks into `[styles text ...]` pairs |
-| `parse-columns` | Parses column definitions with data+style blocks |
-| `table-modifiers` | Scans a table block for `'box`, `'alt`, and column index |
-| `max-style-size` | Returns the largest font size from style blocks in a line/row |
-| `heading-gap` | Returns extra spacing above a line with heading-sized segments |
-| `row-height` | Returns effective table row height based on max segment font size |
-| `format-number-value` | Formats numbers as money or with decimal places |
-| `format-date-value` | Formats date values as date, time, or datetime strings |
-| `format-decimal` | Formats numbers with thousands separators |
-| `ceil-div` | Integer division rounding up |
-| `style-width` | Extract integer width from styles, or 0 |
-| `pad-text` | Pad text to fixed width according to alignment |
-| `is-page-break-row?` | Checks if a table row is a `^L` page break marker |
-| `char-est-width` | Estimated pixel width of a character at current font-size |
-| `measure-column-pixels` | Measures max pixel width across column lines using per-char estimation |
-| `read-jpeg-size` | Read JPEG dimensions from file header. Returns [width height] or none |
-| `read-png-pixels` | Read PNG, decompress, unfilter. Returns [width height ncomp pixel-data] or none |
-| `read-image-size` | Read JPEG or PNG dimensions. Returns [width height] or none |
-| `binary-to-hex` | Convert binary data to uppercase hex string |
-| `emit-image` | Emit PostScript code to render a JPEG or PNG image |
-| `assemble-ps` | Builds the final PostScript document from page buffers |
-| `convert-to-pdf` | Calls `ps2pdf` with error handling |
+The module is wrapped in a `context` to isolate all internal state. `generate-report`, `paper-format`, and `fontsize` are exported.
 
 **Rendering pipeline:**
 
